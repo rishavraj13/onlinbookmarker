@@ -1,0 +1,245 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BookmarkModals from '../components/BookmarkModals.astro';
+---
+
+<Layout title="Folder View">
+  <div class="max-w-4xl mx-auto">
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <div class="flex items-center gap-3 mb-2">
+          <h1 class="text-3xl md:text-4xl font-bold text-text-main tracking-tight capitalize" id="folder-title">Folder</h1>
+          <button id="btn-delete-folder" class="hidden p-2 text-surface-400 hover:text-red-400 hover:bg-surface-800 rounded-lg transition-colors" title="Delete Folder">
+            <i data-lucide="trash-2" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <div class="relative w-full md:w-64">
+          <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-500"></i>
+          <input type="text" id="search-input" placeholder="Search in folder..." class="w-full bg-surface-800/50 border border-surface-700 rounded-xl pl-9 pr-4 py-2.5 text-sm text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500 transition-colors backdrop-blur-sm">
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto min-h-0 pr-2 pb-10" id="bookmarks-container">
+      <div class="flex flex-col items-center justify-center h-64 text-surface-500" id="empty-state">
+        <i data-lucide="folder-open" class="w-12 h-12 mb-4 text-surface-600"></i>
+        <p class="text-lg font-medium text-text-main mb-1">Folder is empty</p>
+        <p class="text-sm">Save a bookmark to this folder to see it here.</p>
+      </div>
+    </div>
+  </div>
+
+  <BookmarkModals />
+</Layout>
+
+<script>
+  import { renderBookmarks } from '../lib/renderer';
+  import { getBookmarks, deleteBookmark, getFolders, deleteFolder, type Folder, type Bookmark } from '../lib/dataClient';
+  
+  let currentFolderId = '';
+  let currentFolderName = '';
+
+  async function updateView() {
+    const urlParams = new URLSearchParams(window.location.search);
+    currentFolderId = urlParams.get('id') || '';
+    
+    const folders = await getFolders();
+    const folder = folders.find((f: Folder) => f.id === currentFolderId);
+    
+    if (folder) {
+      currentFolderName = folder.name;
+    } else {
+      currentFolderName = 'Unknown Folder';
+    }
+
+    const titleEl = document.getElementById('folder-title');
+    if (titleEl) titleEl.textContent = currentFolderName;
+
+    // Show delete button for all folders
+    const btnDelete = document.getElementById('btn-delete-folder');
+    if (btnDelete) {
+      btnDelete.classList.remove('hidden');
+      btnDelete.onclick = async () => {
+        if (confirm(`Delete folder "${currentFolderName}" and all its bookmarks?`)) {
+          await deleteFolder(currentFolderId);
+          window.location.href = '/';
+        }
+      };
+    }
+
+    const allBookmarks = await getBookmarks();
+    const folderBookmarks = allBookmarks.filter((b: Bookmark) => b.folder_id === currentFolderId);
+    
+    const container = document.getElementById('bookmarks-container');
+    if (!container) return;
+
+    if (folderBookmarks.length === 0) {
+      container.innerHTML = `
+        <div class="flex flex-col items-center justify-center h-64 text-surface-500" id="empty-state">
+          <i data-lucide="folder-open" class="w-12 h-12 mb-4 text-surface-600"></i>
+          <p class="text-lg font-medium text-text-main mb-1">Folder is empty</p>
+          <p class="text-sm">Save a bookmark to this folder to see it here.</p>
+        </div>
+      `;
+      // @ts-ignore
+      if (window.lucide) window.lucide.createIcons();
+    } else {
+      container.innerHTML = renderBookmarks(folderBookmarks);
+      // @ts-ignore
+      if (window.lucide) window.lucide.createIcons();
+      attachBookmarkListeners();
+    }
+  }
+
+  function attachBookmarkListeners() {
+    document.querySelectorAll('.btn-copy-bookmark').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id;
+        const allBookmarks = await getBookmarks();
+        const bm = allBookmarks.find((b: Bookmark) => b.id === id);
+        if (bm) {
+          navigator.clipboard.writeText(bm.content);
+          const icon = btn.querySelector('i');
+          if (icon) {
+            icon.setAttribute('data-lucide', 'check');
+            icon.classList.add('text-green-400');
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+            setTimeout(() => {
+              icon.setAttribute('data-lucide', 'copy');
+              icon.classList.remove('text-green-400');
+              // @ts-ignore
+              if (window.lucide) window.lucide.createIcons();
+            }, 2000);
+          }
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-edit-bookmark').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id;
+        const allBookmarks = await getBookmarks();
+        const bm = allBookmarks.find((b: Bookmark) => b.id === id);
+        if (bm) {
+          window.dispatchEvent(new CustomEvent('openBookmarkModal', { detail: bm }));
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-expand-bookmark').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id;
+        const allBookmarks = await getBookmarks();
+        const bm = allBookmarks.find((b: Bookmark) => b.id === id);
+        if (bm) {
+          window.dispatchEvent(new CustomEvent('openExpandedModal', { detail: bm }));
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-delete-bookmark').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        if(confirm('Are you sure you want to delete this bookmark?')) {
+          const id = (e.currentTarget as HTMLElement).dataset.id;
+          if (id) await deleteBookmark(id);
+        }
+      });
+    });
+
+    // Export Logic
+    document.querySelectorAll('.btn-export-pdf').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id;
+        const allBookmarks = await getBookmarks();
+        const bm = allBookmarks.find((b: Bookmark) => b.id === id);
+        // @ts-ignore
+        if (bm && window.html2pdf) {
+          const element = document.createElement('div');
+          element.style.padding = '20px';
+          element.style.fontFamily = 'sans-serif, Arial';
+          element.innerHTML = `
+            <h2 style="margin-bottom: 20px; color: #111827;">${bm.folders?.name || 'Folder'} Bookmark: ${bm.title}</h2>
+            <div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #374151;">${bm.content}</div>
+          `;
+          // @ts-ignore
+          window.html2pdf().set({
+            margin: 10,
+            filename: `bookmark-${id}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+          }).from(element).save();
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-export-txt').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id;
+        const allBookmarks = await getBookmarks();
+        const bm = allBookmarks.find((b: Bookmark) => b.id === id);
+        if (bm) {
+          // Convert HTML content to plain text
+          const tempDiv = document.createElement('div');
+          tempDiv.innerHTML = bm.content || '';
+          const plainTextContent = tempDiv.innerText || tempDiv.textContent || '';
+          
+          const content = `${bm.folders?.name || 'Folder'} Bookmark: ${bm.title}\n\n${plainTextContent}`;
+          const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `bookmark-${id}.txt`;
+          a.click();
+          window.URL.revokeObjectURL(url);
+        }
+      });
+    });
+  }
+
+  function setupSearch() {
+    const searchInput = document.getElementById('search-input') as HTMLInputElement;
+    if (searchInput) {
+      searchInput.addEventListener('input', async (e) => {
+        const query = (e.target as HTMLInputElement).value.toLowerCase();
+        const allBookmarks = await getBookmarks();
+        const folderBookmarks = allBookmarks.filter((b: Bookmark) => b.folder_id === currentFolderId);
+        
+        const filtered = folderBookmarks.filter((b: Bookmark) => 
+          b.title.toLowerCase().includes(query) ||
+          b.content.toLowerCase().includes(query) || 
+          (b.tags && b.tags.some((t: string) => t.toLowerCase().includes(query)))
+        );
+        
+        const container = document.getElementById('bookmarks-container');
+        if (container) {
+          if (filtered.length > 0) {
+            container.innerHTML = renderBookmarks(filtered);
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+            attachBookmarkListeners();
+          } else {
+            container.innerHTML = `<div class="text-center py-10 text-surface-500">No matching bookmarks found in this folder.</div>`;
+          }
+        }
+      });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateView();
+    setupSearch();
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    updateView();
+    setupSearch();
+  });
+  
+  window.addEventListener('bookmarksUpdated', updateView);
+  window.addEventListener('auth-changed', updateView);
+</script>

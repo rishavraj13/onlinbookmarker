@@ -1,11 +1,112 @@
 ---
-import Welcome from '../components/Welcome.astro';
 import Layout from '../layouts/Layout.astro';
-
-// Welcome to Astro! Wondering what to do next? Check out the Astro documentation at https://docs.astro.build
-// Don't want to use any of this? Delete everything in this file, the `assets`, `components`, and `layouts` directories, and start fresh.
+import BookmarkModals from '../components/BookmarkModals.astro';
 ---
 
-<Layout>
-	<Welcome />
+<Layout title="My Folders">
+  <div class="max-w-4xl mx-auto">
+    <header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div>
+        <h1 class="text-3xl md:text-4xl font-bold text-text-main tracking-tight mb-2">My Folders</h1>
+        <p class="text-surface-400">Organize your saved AI conversations into folders.</p>
+      </div>
+      
+      <div class="flex items-center gap-3">
+        <button id="btn-create-folder-main" class="flex items-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-5 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-primary-500/20 active:scale-95">
+          <i data-lucide="folder-plus" class="w-5 h-5"></i>
+          <span>Create Folder</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto min-h-0 pr-2 pb-10">
+      <div id="folders-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Folders will be rendered here -->
+      </div>
+      
+      <div class="hidden flex-col items-center justify-center h-64 text-surface-500" id="empty-state">
+        <div class="w-16 h-16 bg-surface-800 rounded-2xl flex items-center justify-center mb-4 border border-surface-700">
+          <i data-lucide="folder-plus" class="w-8 h-8 text-surface-400"></i>
+        </div>
+        <p class="text-xl font-medium text-text-main mb-2">No folders yet</p>
+        <p class="text-sm mb-6 text-center max-w-sm">Create your first folder to start organizing your AI conversations and bookmarks.</p>
+        <button id="btn-create-folder-empty" class="bg-surface-800 hover:bg-surface-700 text-text-main px-6 py-2.5 rounded-xl font-medium transition-colors border border-surface-700 flex items-center gap-2 active:scale-95">
+          <i data-lucide="plus" class="w-4 h-4"></i> Create Folder
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <BookmarkModals />
+
 </Layout>
+
+<script>
+  import { getFolders, type Folder } from '../lib/dataClient';
+  
+  async function updateView() {
+    const folders = await getFolders();
+    const container = document.getElementById('folders-container');
+    const emptyState = document.getElementById('empty-state');
+    if (!container || !emptyState) return;
+
+    if (folders.length === 0) {
+      container.classList.add('hidden');
+      emptyState.classList.remove('hidden');
+      emptyState.classList.add('flex');
+    } else {
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+      container.classList.remove('hidden');
+      
+      container.innerHTML = folders.map((f: Folder) => `
+        <a href="/folder?id=${encodeURIComponent(f.id)}" class="glass-panel p-6 group hover:border-primary-500/50 transition-all duration-300 flex items-center justify-between shadow-md hover:shadow-lg">
+          <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl bg-primary-500/10 text-primary-400 group-hover:scale-110 transition-transform duration-300 border border-primary-500/20">
+              <i data-lucide="folder" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold text-text-main group-hover:text-primary-400 transition-colors capitalize">${f.name}</h3>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-5 h-5 text-surface-500 group-hover:text-primary-400 group-hover:translate-x-1 transition-all"></i>
+        </a>
+      `).join('');
+      
+      // Re-initialize icons for newly rendered content
+      // @ts-ignore
+      if (window.lucide) window.lucide.createIcons();
+    }
+  }
+
+  function attachListeners() {
+    const btnMain = document.getElementById('btn-create-folder-main');
+    const btnEmpty = document.getElementById('btn-create-folder-empty');
+    
+    const openFolderModal = () => window.dispatchEvent(new CustomEvent('openFolderModal'));
+    
+    // Remove existing listeners to avoid duplicates if attachListeners is called multiple times
+    if (btnMain) {
+      btnMain.removeEventListener('click', openFolderModal);
+      btnMain.addEventListener('click', openFolderModal);
+    }
+    
+    if (btnEmpty) {
+      btnEmpty.removeEventListener('click', openFolderModal);
+      btnEmpty.addEventListener('click', openFolderModal);
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateView();
+    attachListeners();
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    updateView();
+    attachListeners();
+  });
+  
+  window.addEventListener('foldersUpdated', updateView);
+  window.addEventListener('auth-changed', updateView);
+</script>

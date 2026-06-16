@@ -1,23 +1,187 @@
+---
+import '../styles/global.css';
+import { ClientRouter } from 'astro:transitions';
+import SetupSupabase from '../components/SetupSupabase.astro';
+import Auth from '../components/Auth.astro';
+import { isSupabaseConfigured } from '../lib/supabaseClient';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
 <!doctype html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro Basics</title>
-	</head>
-	<body>
-		<slot />
-	</body>
-</html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="description" content="AI Chat Bookmarker - Save and manage your favorite AI conversations" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | AI Bookmark</title>
+    
+    <!-- Smooth View Transitions -->
+    <ClientRouter />
 
-<style>
-	html,
-	body {
-		margin: 0;
-		width: 100%;
-		height: 100%;
-	}
-</style>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Scripts for Exporting -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" defer></script>
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest" defer></script>
+  </head>
+  <body class="flex flex-col md:flex-row min-h-screen overflow-hidden relative">
+    
+    {isSupabaseConfigured && <Auth />}
+
+    <!-- Sidebar -->
+    <aside class="glass-panel m-4 w-full md:w-64 flex-shrink-0 flex flex-col z-10 sticky top-4 h-[calc(100vh-2rem)] overflow-y-auto hidden md:flex">
+      <div class="p-6 flex items-center justify-between border-b border-surface-700/50">
+        <a href="/" class="flex items-center gap-3 hover:opacity-80 transition-opacity">
+          <div class="bg-primary-500/20 text-primary-400 p-2 rounded-xl">
+            <i data-lucide="bookmark"></i>
+          </div>
+          <h1 class="font-bold text-xl tracking-tight text-text-main">AI Bookmark</h1>
+        </a>
+      </div>
+      
+      <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6" id="sidebar-nav">
+
+
+        <!-- Custom Folders -->
+        <div>
+          <div class="flex items-center justify-between mb-3 px-2">
+            <h2 class="text-xs font-semibold text-surface-400 uppercase tracking-wider">My Folders</h2>
+            <button id="btn-new-folder-sidebar" class="text-surface-400 hover:text-primary-500 transition-colors" title="Create Folder">
+              <i data-lucide="folder-plus" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <nav class="flex flex-col gap-1" id="custom-folders-list">
+            <div class="px-3 py-2 text-xs text-surface-500 italic">Loading folders...</div>
+          </nav>
+        </div>
+      </div>
+      
+      <div class="p-4 border-t border-surface-700/50 flex flex-col gap-3">
+        <button id="btn-add-bookmark-global" class="w-full flex items-center justify-center gap-2 bg-primary-600 hover:bg-primary-500 text-white px-4 py-2.5 rounded-xl font-medium transition-all shadow-lg shadow-primary-500/20 active:scale-95">
+          <i data-lucide="plus" class="w-4 h-4"></i> New Bookmark
+        </button>
+        {isSupabaseConfigured && (
+          <button id="btn-logout" class="w-full flex items-center justify-center gap-2 bg-surface-800 hover:bg-surface-700 text-surface-400 hover:text-red-400 px-4 py-2 rounded-xl text-sm font-medium transition-all">
+            <i data-lucide="log-out" class="w-4 h-4"></i> Sign Out
+          </button>
+        )}
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto relative z-0 pb-24 md:pb-8">
+      <!-- Ambient background glow -->
+      <div class="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10"></div>
+      <div class="fixed bottom-[-20%] left-[10%] w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none -z-10"></div>
+      
+      {!isSupabaseConfigured && <SetupSupabase />}
+      <slot />
+    </main>
+    
+
+    <!-- Mobile Bottom Bar -->
+    <div class="md:hidden glass-panel rounded-none border-x-0 border-b-0 fixed bottom-0 left-0 w-full z-50 flex items-center justify-around p-3 pb-safe">
+      <a href="/folders" class="flex flex-col items-center gap-1 text-surface-400 hover:text-primary-500">
+        <i data-lucide="folder" class="w-5 h-5"></i>
+        <span class="text-[10px]">Folders</span>
+      </a>
+      <button id="btn-add-bookmark-mobile" class="bg-primary-500 text-white p-3 rounded-full shadow-lg shadow-primary-500/30 transform -translate-y-4">
+        <i data-lucide="plus" class="w-6 h-6"></i>
+      </button>
+      <a href="/settings" class="flex flex-col items-center gap-1 text-surface-400 hover:text-primary-500">
+        <i data-lucide="settings" class="w-5 h-5"></i>
+        <span class="text-[10px]">Options</span>
+      </a>
+    </div>
+
+    <!-- Global Modals Container -->
+    <div id="modals-container"></div>
+
+    <script>
+      import { getFolders, type Folder } from '../lib/dataClient';
+      import { supabase } from '../lib/supabaseClient';
+
+      // Make setup function reusable across navigations
+      function setupApp() {
+        // @ts-ignore
+        if (window.lucide) window.lucide.createIcons();
+        
+        loadCustomFolders();
+      }
+
+      async function loadCustomFolders() {
+        const folders = await getFolders();
+        const container = document.getElementById('custom-folders-list');
+        if (!container) return;
+        
+        container.innerHTML = folders.length ? '' : '<div class="px-3 py-2 text-xs text-surface-500 italic">No custom folders yet.</div>';
+        
+        folders.forEach((folder: Folder) => {
+          const a = document.createElement('a');
+          a.href = `/folder?id=${encodeURIComponent(folder.id)}`;
+          
+          let icon = 'folder';
+
+          
+          const isActive = window.location.pathname === '/folder' && window.location.search.includes(folder.id);
+          const activeClasses = isActive 
+            ? 'bg-surface-800 text-text-main border border-surface-700 shadow-md shadow-black/20' 
+            : 'text-surface-500 hover:text-text-main hover:bg-surface-700/50 border border-transparent';
+
+          a.className = `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group ${activeClasses}`;
+          a.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4 ${isActive ? 'text-primary-500' : 'group-hover:text-primary-500'} transition-colors"></i> <span class="truncate">${folder.name}</span>`;
+          container.appendChild(a);
+        });
+        
+        // Re-initialize icons for new DOM elements
+        // @ts-ignore
+        if (window.lucide) window.lucide.createIcons();
+      }
+
+      document.addEventListener('DOMContentLoaded', setupApp);
+      document.addEventListener('astro:page-load', setupApp); // Handle View Transitions
+      window.addEventListener('foldersUpdated', loadCustomFolders);
+      window.addEventListener('auth-changed', loadCustomFolders);
+      
+      // Setup event listeners that shouldn't be inside async setupApp
+      function attachListeners() {
+        const btnGlobal = document.getElementById('btn-add-bookmark-global');
+        const btnMobile = document.getElementById('btn-add-bookmark-mobile');
+        const btnNewFolderSidebar = document.getElementById('btn-new-folder-sidebar');
+        const btnLogout = document.getElementById('btn-logout');
+        
+        if (btnGlobal) btnGlobal.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openBookmarkModal')));
+        if (btnMobile) btnMobile.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openBookmarkModal')));
+        if (btnNewFolderSidebar) btnNewFolderSidebar.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openFolderModal')));
+        
+        if (btnLogout) {
+          btnLogout.addEventListener('click', async () => {
+            (btnLogout as HTMLButtonElement).disabled = true;
+            btnLogout.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Signing Out...`;
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+            
+            await supabase?.auth.signOut();
+            window.location.reload();
+          });
+        }
+
+      }
+      document.addEventListener('astro:page-load', attachListeners);
+      document.addEventListener('DOMContentLoaded', attachListeners);
+      
+    </script>
+  </body>
+</html>

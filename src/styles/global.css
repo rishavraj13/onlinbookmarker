@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #f0fdfa;
+  --color-primary-100: #ccfbf1;
+  --color-primary-200: #99f6e4;
+  --color-primary-300: #5eead4;
+  --color-primary-400: #2dd4bf;
+  --color-primary-500: #14b8a6;
+  --color-primary-600: #0d9488;
+  --color-primary-700: #0f766e;
+  --color-primary-800: #115e59;
+  --color-primary-900: #134e4a;
+  --color-primary-950: #042f2e;
+
+  --color-surface-900: #121214;
+  --color-surface-800: #18181b;
+  --color-surface-700: #27272a;
+  --color-surface-600: #3f3f46;
+  --color-surface-500: #71717a;
+  --color-surface-400: #a1a1aa;
+  --color-surface-300: #d4d4d8;
+
+  --color-text-main: #f4f4f5;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  
+  --animate-fade-in: fade-in 0.3s ease-out forwards;
+  --animate-slide-up: slide-up 0.4s ease-out forwards;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+html, body {
+  @apply bg-surface-900 text-text-main font-sans antialiased min-h-screen selection:bg-primary-500 selection:text-white;
+}
+
+.glass-panel {
+  @apply bg-surface-800/60 backdrop-blur-md border border-surface-700/50 rounded-2xl shadow-xl;
+}
+
+.glass-button {
+  @apply bg-surface-700/50 hover:bg-surface-600/50 backdrop-blur-sm border border-surface-600/50 transition-all duration-300;
+}
+
+/* Scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-surface-900;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-surface-700 rounded-full hover:bg-surface-600 transition-colors;
+}
+
+/* Smooth view transitions */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.3s;
+}

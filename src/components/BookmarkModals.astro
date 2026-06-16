@@ -1,0 +1,442 @@
+---
+
+---
+
+<!-- Bookmark Modal -->
+<div
+  id="bookmark-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300"
+>
+  <div
+    class="glass-panel w-full max-w-lg mx-4 p-6 transform scale-95 transition-transform duration-300"
+    id="bookmark-modal-content"
+  >
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-xl font-bold text-text-main" id="bookmark-modal-title">
+        New Bookmark
+      </h3>
+      <button
+        class="text-surface-400 hover:text-text-main transition-colors"
+        id="btn-close-bookmark-modal"
+      >
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form id="bookmark-form" class="flex flex-col gap-4">
+      <input type="hidden" id="bookmark-id" value="" />
+
+      <div class="flex flex-col gap-1.5">
+        <label for="bookmark-title" class="text-sm font-medium text-surface-300"
+          >Title</label
+        >
+        <input
+          type="text"
+          id="bookmark-title"
+          class="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500 transition-colors"
+          placeholder="e.g. Next.js Routing Guide"
+          required
+        />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label
+          for="bookmark-folder_id"
+          class="text-sm font-medium text-surface-300">Folder</label
+        >
+        <select
+          id="bookmark-folder_id"
+          class="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-text-main focus:outline-none focus:border-primary-500 transition-colors"
+          required
+        >
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label
+          for="bookmark-content"
+          class="text-sm font-medium text-surface-300">Content</label
+        >
+        <textarea
+          id="bookmark-content"
+          rows="6"
+          class="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500 transition-colors resize-none"
+          placeholder="Paste the chat response or line here..."
+          required></textarea>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label for="bookmark-tags" class="text-sm font-medium text-surface-300"
+          >Tags (comma separated, optional)</label
+        >
+        <input
+          type="text"
+          id="bookmark-tags"
+          class="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500 transition-colors"
+          placeholder="e.g. code, explanation, useful"
+        />
+      </div>
+
+      <div class="flex justify-end gap-3 mt-4">
+        <button
+          type="button"
+          id="btn-cancel-bookmark"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-surface-400 hover:text-text-main hover:bg-surface-700 transition-colors"
+          >Cancel</button
+        >
+        <button
+          type="submit"
+          class="bg-primary-600 hover:bg-primary-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary-500/20"
+          id="btn-save-bookmark">Save Bookmark</button
+        >
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Folder Modal -->
+<div
+  id="folder-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300"
+>
+  <div
+    class="glass-panel w-full max-w-sm mx-4 p-6 transform scale-95 transition-transform duration-300"
+    id="folder-modal-content"
+  >
+    <div class="flex items-center justify-between mb-5">
+      <h3 class="text-xl font-bold text-text-main">Create Folder</h3>
+      <button
+        class="text-surface-400 hover:text-text-main transition-colors"
+        id="btn-close-folder-modal"
+      >
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+    </div>
+
+    <form id="folder-form" class="flex flex-col gap-4">
+      <div class="flex flex-col gap-1.5">
+        <label for="folder-name" class="text-sm font-medium text-surface-300"
+          >Folder Name</label
+        >
+        <input
+          type="text"
+          id="folder-name"
+          class="w-full bg-surface-900 border border-surface-600 rounded-lg px-3 py-2 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500 transition-colors"
+          placeholder="e.g. Project X"
+          required
+        />
+      </div>
+
+      <div class="flex justify-end gap-3 mt-4">
+        <button
+          type="button"
+          id="btn-cancel-folder"
+          class="px-4 py-2 rounded-lg text-sm font-medium text-surface-400 hover:text-text-main hover:bg-surface-700 transition-colors"
+          >Cancel</button
+        >
+        <button
+          type="submit"
+          class="bg-primary-600 hover:bg-primary-500 text-white px-5 py-2 rounded-lg text-sm font-medium transition-colors shadow-lg shadow-primary-500/20"
+          >Create</button
+        >
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Expanded View Modal -->
+<div
+  id="expanded-modal"
+  class="fixed inset-0 z-50 flex items-center justify-center bg-surface-900/95 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-300"
+>
+  <div class="w-full h-full max-w-5xl mx-auto flex flex-col p-4 md:p-8 transform scale-95 transition-transform duration-300" id="expanded-modal-content">
+    <div class="flex items-center justify-between mb-4">
+      <input type="text" id="expanded-title" class="text-2xl md:text-3xl font-bold text-text-main bg-transparent border-none focus:outline-none focus:ring-0 flex-1" placeholder="Untitled">
+      <div class="flex items-center gap-4">
+        <span id="expanded-save-status" class="text-sm font-medium text-surface-400 opacity-0 transition-opacity">Saved</span>
+        <button class="p-2 text-surface-400 hover:text-text-main bg-surface-800 hover:bg-surface-700 rounded-lg transition-colors border border-surface-700" id="btn-close-expanded" title="Close (or press Esc)">
+          <i data-lucide="minimize-2" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+    
+    <input type="hidden" id="expanded-id" value="">
+    <input type="hidden" id="expanded-folder-id" value="">
+    <input type="hidden" id="expanded-tags" value="">
+    
+    <div class="flex-1 bg-surface-800 border border-surface-700 rounded-xl overflow-hidden flex flex-col shadow-2xl relative">
+      <div id="expanded-content" contenteditable="true" class="flex-1 w-full p-6 bg-transparent text-text-main focus:outline-none overflow-y-auto text-sm md:text-base leading-relaxed" style="white-space: pre-wrap;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { getFolders, saveFolder, saveBookmark } from "../lib/dataClient";
+
+  async function updateFolderSelect() {
+    const folders = await getFolders();
+    
+    const select = document.getElementById("bookmark-folder_id") as HTMLSelectElement;
+    if (!select) return;
+
+    select.innerHTML = "";
+
+    if (folders.length > 0) {
+      folders.forEach((f: { id: string; name: string }) => {
+        const option = document.createElement("option");
+        option.value = f.id;
+        option.textContent = f.name;
+        select.appendChild(option);
+      });
+    } else {
+      select.innerHTML = '<option value="" disabled>No folders found</option>';
+    }
+  }
+
+  function setupModals() {
+    updateFolderSelect();
+
+    // --- Bookmark Modal Logic ---
+    const bModal = document.getElementById("bookmark-modal");
+    const bContent = document.getElementById("bookmark-modal-content");
+    const bForm = document.getElementById("bookmark-form") as HTMLFormElement;
+
+    const openBookmarkModal = async (e?: any) => {
+      // Ensure select is up to date before opening
+      await updateFolderSelect();
+
+      const editData = e?.detail;
+      if (editData && editData.id) {
+        document.getElementById("bookmark-modal-title")!.textContent = "Edit Bookmark";
+        (document.getElementById("bookmark-id") as HTMLInputElement).value = editData.id;
+        (document.getElementById("bookmark-title") as HTMLInputElement).value = editData.title || "";
+        (document.getElementById("bookmark-folder_id") as HTMLSelectElement).value = editData.folder_id;
+        (document.getElementById("bookmark-content") as HTMLTextAreaElement).value = editData.content;
+        (document.getElementById("bookmark-tags") as HTMLInputElement).value = (editData.tags || []).join(", ");
+      } else {
+        document.getElementById("bookmark-modal-title")!.textContent = "New Bookmark";
+        if (bForm) bForm.reset();
+        (document.getElementById("bookmark-id") as HTMLInputElement).value = "";
+
+        // If we are on a folder page, auto-select it by ID
+        const urlParams = new URLSearchParams(window.location.search);
+        const folderIdParam = urlParams.get("id");
+        if (folderIdParam) {
+          const select = document.getElementById("bookmark-folder_id") as HTMLSelectElement;
+          if (select && Array.from(select.options).some((o) => o.value === folderIdParam)) {
+            select.value = folderIdParam;
+          }
+        }
+      }
+
+      bModal?.classList.remove("opacity-0", "pointer-events-none");
+      bContent?.classList.remove("scale-95");
+    };
+
+    const closeBookmarkModal = () => {
+      bModal?.classList.add("opacity-0", "pointer-events-none");
+      bContent?.classList.add("scale-95");
+    };
+
+    window.removeEventListener("openBookmarkModal", openBookmarkModal);
+    window.addEventListener("openBookmarkModal", openBookmarkModal);
+
+    const btnCloseBookmarkModal = document.getElementById("btn-close-bookmark-modal");
+    if (btnCloseBookmarkModal) btnCloseBookmarkModal.onclick = closeBookmarkModal;
+
+    const btnCancelBookmark = document.getElementById("btn-cancel-bookmark");
+    if (btnCancelBookmark) btnCancelBookmark.onclick = closeBookmarkModal;
+
+    if (bForm) {
+      bForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const id = (document.getElementById("bookmark-id") as HTMLInputElement).value;
+        const title = (document.getElementById("bookmark-title") as HTMLInputElement).value;
+        const folder_id = (document.getElementById("bookmark-folder_id") as HTMLSelectElement).value;
+        const content = (document.getElementById("bookmark-content") as HTMLTextAreaElement).value;
+        const tagsStr = (document.getElementById("bookmark-tags") as HTMLInputElement).value;
+
+        if (!folder_id) return alert("Please select a folder");
+
+        const tags = tagsStr.split(",").map((t) => t.trim()).filter((t) => t);
+
+        const btnSave = document.getElementById("btn-save-bookmark");
+        if (btnSave) btnSave.textContent = "Saving...";
+
+        if (id) {
+          // Edit existing
+          await saveBookmark({
+            id,
+            title,
+            folder_id,
+            content,
+            tags,
+            updated_at: new Date().toISOString(),
+          }, true);
+        } else {
+          // Create new
+          const newId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+          await saveBookmark({
+            id: newId,
+            title,
+            folder_id,
+            content,
+            tags,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+
+        if (btnSave) btnSave.textContent = "Save Bookmark";
+        closeBookmarkModal();
+      };
+    }
+
+    // --- Folder Modal Logic ---
+    const fModal = document.getElementById("folder-modal");
+    const fContent = document.getElementById("folder-modal-content");
+    const fForm = document.getElementById("folder-form") as HTMLFormElement;
+
+    const openFolderModal = () => {
+      if (fForm) fForm.reset();
+      fModal?.classList.remove("opacity-0", "pointer-events-none");
+      fContent?.classList.remove("scale-95");
+    };
+
+    const closeFolderModal = () => {
+      fModal?.classList.add("opacity-0", "pointer-events-none");
+      fContent?.classList.add("scale-95");
+    };
+
+    window.removeEventListener("openFolderModal", openFolderModal);
+    window.addEventListener("openFolderModal", openFolderModal);
+
+    const btnCloseFolderModal = document.getElementById("btn-close-folder-modal");
+    if (btnCloseFolderModal) btnCloseFolderModal.onclick = closeFolderModal;
+
+    const btnCancelFolder = document.getElementById("btn-cancel-folder");
+    if (btnCancelFolder) btnCancelFolder.onclick = closeFolderModal;
+
+    if (fForm) {
+      fForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const name = (document.getElementById("folder-name") as HTMLInputElement).value.trim();
+        if (!name) return;
+
+        await saveFolder(name);
+        closeFolderModal();
+      };
+    }
+
+    // --- Expanded Modal Logic ---
+    const eModal = document.getElementById("expanded-modal");
+    const eContent = document.getElementById("expanded-modal-content");
+    const sidebar = document.querySelector("aside");
+    let autoSaveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const openExpandedModal = (e?: any) => {
+      const editData = e?.detail;
+      if (!editData) return;
+
+      (document.getElementById("expanded-id") as HTMLInputElement).value = editData.id || "";
+      (document.getElementById("expanded-folder-id") as HTMLInputElement).value = editData.folder_id || "";
+      (document.getElementById("expanded-tags") as HTMLInputElement).value = (editData.tags || []).join(", ");
+      (document.getElementById("expanded-title") as HTMLInputElement).value = editData.title || "";
+      
+      const contentEl = document.getElementById("expanded-content");
+      if (contentEl) {
+        // If content is already HTML, use it. Otherwise, escape and preserve newlines.
+        const raw = editData.content || "";
+        const isHTML = /<[a-z][\s\S]*>/i.test(raw);
+        contentEl.innerHTML = isHTML ? raw : raw; // white-space: pre-wrap will handle plain text newlines!
+      }
+
+      eModal?.classList.remove("opacity-0", "pointer-events-none");
+      eContent?.classList.remove("scale-95");
+      document.body.style.overflow = "hidden"; // Prevent scrolling
+      if (sidebar) sidebar.style.display = 'none'; // Hide sidebar
+    };
+
+    const performAutoSave = async () => {
+      const id = (document.getElementById("expanded-id") as HTMLInputElement).value;
+      const title = (document.getElementById("expanded-title") as HTMLInputElement).value;
+      const contentEl = document.getElementById("expanded-content");
+      const content = contentEl ? contentEl.innerHTML : "";
+      const folder_id = (document.getElementById("expanded-folder-id") as HTMLInputElement).value;
+      const tagsStr = (document.getElementById("expanded-tags") as HTMLInputElement).value;
+
+      if (!id || !folder_id) return;
+
+      const tags = tagsStr.split(",").map((t) => t.trim()).filter((t) => t);
+      const statusEl = document.getElementById("expanded-save-status");
+      
+      if (statusEl) {
+        statusEl.textContent = "Saving...";
+        statusEl.classList.remove("opacity-0");
+      }
+
+      await saveBookmark({
+        id,
+        title,
+        folder_id,
+        content,
+        tags,
+        updated_at: new Date().toISOString(),
+      }, true);
+
+      if (statusEl) {
+        statusEl.textContent = "Saved";
+        setTimeout(() => {
+          statusEl.classList.add("opacity-0");
+        }, 2000);
+      }
+    };
+
+    const closeExpandedModal = () => {
+      eModal?.classList.add("opacity-0", "pointer-events-none");
+      eContent?.classList.add("scale-95");
+      document.body.style.overflow = "";
+      if (sidebar) sidebar.style.display = ''; // Restore sidebar
+      
+      // Force an immediate save if there are pending changes before closing
+      if (autoSaveTimeout) {
+        clearTimeout(autoSaveTimeout);
+        performAutoSave();
+        autoSaveTimeout = null;
+      }
+    };
+
+    const triggerAutoSave = () => {
+      if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+      const statusEl = document.getElementById("expanded-save-status");
+      if (statusEl) {
+        statusEl.textContent = "Editing...";
+        statusEl.classList.remove("opacity-0");
+      }
+      autoSaveTimeout = setTimeout(performAutoSave, 1500); // 1.5s debounce
+    };
+
+    window.removeEventListener("openExpandedModal", openExpandedModal);
+    window.addEventListener("openExpandedModal", openExpandedModal);
+
+    const btnCloseExpanded = document.getElementById("btn-close-expanded");
+    if (btnCloseExpanded) btnCloseExpanded.onclick = closeExpandedModal;
+
+    const titleInput = document.getElementById("expanded-title");
+    const contentInput = document.getElementById("expanded-content");
+    
+    if (titleInput) titleInput.oninput = triggerAutoSave;
+    if (contentInput) contentInput.oninput = triggerAutoSave;
+  }
+
+  // Bind the global setup
+  document.addEventListener("DOMContentLoaded", setupModals);
+  document.addEventListener("astro:page-load", setupModals);
+  
+  window.removeEventListener("foldersUpdated", updateFolderSelect);
+  window.addEventListener("foldersUpdated", updateFolderSelect);
+  
+  window.removeEventListener("auth-changed", updateFolderSelect);
+  window.addEventListener("auth-changed", updateFolderSelect);
+</script>

@@ -1,0 +1,260 @@
+---
+---
+<div id="auth-container" class="hidden absolute inset-0 z-50 bg-surface-900 flex items-center justify-center">
+  <div class="glass-panel w-full max-w-md p-8">
+    <div class="text-center mb-8">
+      <div class="w-12 h-12 bg-primary-500/20 text-primary-500 rounded-xl flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="lock" class="w-6 h-6"></i>
+      </div>
+      <h2 id="auth-title" class="text-2xl font-bold text-text-main">Welcome to AI Bookmark</h2>
+      <p id="auth-desc" class="text-surface-400 mt-2">Sign in to sync your bookmarks across devices.</p>
+    </div>
+
+    <form id="auth-form" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-surface-300 mb-1">Email</label>
+        <input type="email" id="auth-email" required class="w-full bg-surface-800 border border-surface-600 rounded-lg px-4 py-2.5 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500">
+      </div>
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm font-medium text-surface-300">Password</label>
+          <button type="button" id="btn-forgot-password" class="text-xs text-primary-400 hover:text-primary-300 transition-colors">Forgot password?</button>
+        </div>
+        <input type="password" id="auth-password" required class="w-full bg-surface-800 border border-surface-600 rounded-lg px-4 py-2.5 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500">
+      </div>
+      
+      <div class="pt-2 flex flex-col gap-3">
+        <button type="submit" id="btn-login" class="flex items-center justify-center gap-2 w-full bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-primary-500/20 active:scale-95">
+          Sign In
+        </button>
+        <button type="button" id="btn-signup" class="flex items-center justify-center gap-2 w-full bg-surface-700 hover:bg-surface-600 disabled:opacity-50 text-text-main font-medium py-2.5 rounded-lg transition-colors border border-surface-600/50 active:scale-95">
+          Create Account
+        </button>
+      </div>
+
+      <div class="mt-4 text-center">
+        <p id="auth-error" class="text-red-400 text-sm hidden"></p>
+        <p id="auth-msg" class="text-green-400 text-sm hidden"></p>
+      </div>
+    </form>
+
+    <form id="update-password-form" class="space-y-4 hidden">
+      <div>
+        <label class="block text-sm font-medium text-surface-300 mb-1">New Password</label>
+        <input type="password" id="update-password-input" required class="w-full bg-surface-800 border border-surface-600 rounded-lg px-4 py-2.5 text-text-main placeholder-surface-500 focus:outline-none focus:border-primary-500">
+      </div>
+      <div class="pt-2">
+        <button type="submit" id="btn-update-password" class="flex items-center justify-center gap-2 w-full bg-primary-600 hover:bg-primary-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors shadow-lg shadow-primary-500/20 active:scale-95">
+          Update Password
+        </button>
+      </div>
+      <div class="mt-4 text-center">
+        <p id="update-error" class="text-red-400 text-sm hidden"></p>
+        <p id="update-msg" class="text-green-400 text-sm hidden"></p>
+      </div>
+    </form>
+    
+    <div id="auth-github-section" class="mt-6 border-t border-surface-700 pt-6">
+      <button type="button" id="btn-github" class="flex items-center justify-center gap-2 w-full bg-surface-800 hover:bg-surface-700 disabled:opacity-50 text-text-main font-medium py-2.5 rounded-lg transition-colors border border-surface-600/50 active:scale-95">
+        <i data-lucide="github" class="w-5 h-5"></i> Continue with GitHub
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+  import { supabase } from '../lib/supabaseClient';
+
+  document.addEventListener('astro:page-load', async () => {
+    if (!supabase) return;
+    
+    const authContainer = document.getElementById('auth-container');
+    const authForm = document.getElementById('auth-form');
+    const updatePasswordForm = document.getElementById('update-password-form');
+    const githubSection = document.getElementById('auth-github-section');
+    
+    const emailInput = document.getElementById('auth-email') as HTMLInputElement;
+    const passwordInput = document.getElementById('auth-password') as HTMLInputElement;
+    const updatePasswordInput = document.getElementById('update-password-input') as HTMLInputElement;
+    
+    const errorEl = document.getElementById('auth-error');
+    const msgEl = document.getElementById('auth-msg');
+    const updateErrorEl = document.getElementById('update-error');
+    const updateMsgEl = document.getElementById('update-msg');
+    
+    const btnLogin = document.getElementById('btn-login');
+    const btnSignup = document.getElementById('btn-signup');
+    const btnForgotPassword = document.getElementById('btn-forgot-password');
+    const btnUpdatePassword = document.getElementById('btn-update-password');
+    const btnGithub = document.getElementById('btn-github');
+
+    // Check auth status
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // Check if URL has #error=access_denied&error_code=403 or similar, or type=recovery
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const isRecovery = hashParams.get('type') === 'recovery';
+
+    if (!session && !isRecovery) {
+      authContainer?.classList.remove('hidden');
+    } else if (session && !isRecovery) {
+      // User is logged in, attach to global window
+      // @ts-ignore
+      window.currentUser = session.user;
+      authContainer?.classList.add('hidden');
+      window.dispatchEvent(new CustomEvent('auth-changed'));
+    }
+
+    let isRecoveringPassword = isRecovery;
+
+    // Listen for auth changes
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        isRecoveringPassword = true;
+        authContainer?.classList.remove('hidden');
+        authForm?.classList.add('hidden');
+        githubSection?.classList.add('hidden');
+        updatePasswordForm?.classList.remove('hidden');
+        
+        const titleEl = document.getElementById('auth-title');
+        const descEl = document.getElementById('auth-desc');
+        if (titleEl) titleEl.textContent = 'Reset Password';
+        if (descEl) descEl.textContent = 'Please enter your new password below.';
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        if (!isRecoveringPassword) {
+          // @ts-ignore
+          window.currentUser = session?.user;
+          authContainer?.classList.add('hidden');
+          window.dispatchEvent(new CustomEvent('auth-changed'));
+        }
+      } else if (event === 'SIGNED_OUT') {
+        // @ts-ignore
+        window.currentUser = null;
+        isRecoveringPassword = false;
+        
+        authForm?.classList.remove('hidden');
+        githubSection?.classList.remove('hidden');
+        updatePasswordForm?.classList.add('hidden');
+        
+        const titleEl = document.getElementById('auth-title');
+        const descEl = document.getElementById('auth-desc');
+        if (titleEl) titleEl.textContent = 'Welcome to AI Bookmark';
+        if (descEl) descEl.textContent = 'Sign in to sync your bookmarks across devices.';
+        
+        authContainer?.classList.remove('hidden');
+        window.dispatchEvent(new CustomEvent('auth-changed'));
+      }
+    });
+
+    const showError = (el: HTMLElement | null, msgElRef: HTMLElement | null, msg: string) => {
+      if (el && msgElRef) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        msgElRef.classList.add('hidden');
+      }
+    };
+
+    const showMsg = (el: HTMLElement | null, errorElRef: HTMLElement | null, msg: string) => {
+      if (el && errorElRef) {
+        el.textContent = msg;
+        el.classList.remove('hidden');
+        errorElRef.classList.add('hidden');
+      }
+    };
+
+    const setLoading = (btn: HTMLButtonElement, text: string) => {
+      btn.disabled = true;
+      btn.dataset.original = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> ${text}`;
+      // @ts-ignore
+      if (window.lucide) window.lucide.createIcons();
+    };
+    
+    const resetLoading = (btn: HTMLButtonElement) => {
+      btn.disabled = false;
+      if (btn.dataset.original) btn.innerHTML = btn.dataset.original;
+    };
+
+    // Form logic
+    authForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      
+      if (btnLogin) setLoading(btnLogin as HTMLButtonElement, 'Signing in...');
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        showError(errorEl, msgEl, error.message);
+        if (btnLogin) resetLoading(btnLogin as HTMLButtonElement);
+      }
+    });
+
+    btnSignup?.addEventListener('click', async () => {
+      const email = emailInput.value;
+      const password = passwordInput.value;
+      if (!email || !password) return showError(errorEl, msgEl, 'Email and password required');
+      
+      if (btnSignup) setLoading(btnSignup as HTMLButtonElement, 'Creating...');
+      const { error } = await supabase.auth.signUp({ email, password });
+      if (error) {
+        showError(errorEl, msgEl, error.message);
+        if (btnSignup) resetLoading(btnSignup as HTMLButtonElement);
+      } else {
+        showMsg(msgEl, errorEl, 'Check your email for the confirmation link! (If auto-confirm is off)');
+        if (btnSignup) resetLoading(btnSignup as HTMLButtonElement);
+      }
+    });
+
+    btnForgotPassword?.addEventListener('click', async () => {
+      const email = emailInput.value;
+      if (!email) return showError(errorEl, msgEl, 'Please enter your email to reset password');
+      
+      if (btnForgotPassword) {
+        btnForgotPassword.textContent = 'Sending...';
+        btnForgotPassword.classList.add('opacity-50', 'pointer-events-none');
+      }
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + window.location.pathname,
+      });
+      
+      if (error) {
+        showError(errorEl, msgEl, error.message);
+      } else {
+        showMsg(msgEl, errorEl, 'Password reset link sent to your email.');
+      }
+      
+      if (btnForgotPassword) {
+        btnForgotPassword.textContent = 'Forgot password?';
+        btnForgotPassword.classList.remove('opacity-50', 'pointer-events-none');
+      }
+    });
+
+    updatePasswordForm?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newPassword = updatePasswordInput.value;
+      
+      if (btnUpdatePassword) setLoading(btnUpdatePassword as HTMLButtonElement, 'Updating...');
+      
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      
+      if (error) {
+        showError(updateErrorEl, updateMsgEl, error.message);
+        if (btnUpdatePassword) resetLoading(btnUpdatePassword as HTMLButtonElement);
+      } else {
+        showMsg(updateMsgEl, updateErrorEl, 'Password updated successfully!');
+        setTimeout(() => {
+          isRecoveringPassword = false;
+          authContainer?.classList.add('hidden');
+          // @ts-ignore
+          if (window.currentUser) window.dispatchEvent(new CustomEvent('auth-changed'));
+        }, 1500);
+      }
+    });
+
+    btnGithub?.addEventListener('click', async () => {
+      if (btnGithub) setLoading(btnGithub as HTMLButtonElement, 'Redirecting...');
+      await supabase.auth.signInWithOAuth({ provider: 'github' });
+    });
+  });
+</script>
