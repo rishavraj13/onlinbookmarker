@@ -25,3 +25,4 @@ pnpm-debug.log*
 
 schema.sql
 SetupSupabase.astro
+src/components/SetupSupabase.astro
