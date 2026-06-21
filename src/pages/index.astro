@@ -37,6 +37,45 @@ import BookmarkModals from '../components/BookmarkModals.astro';
     </div>
   </div>
 
+  <!-- SEO Content Section (Visually Hidden but readable by Google) -->
+  <section class="sr-only">
+    <h2 class="text-2xl font-bold text-text-main">RBookmark: The Ultimate Custom Bookmarker App</h2>
+    <p>
+      In today’s fast-paced digital landscape, information overload is a genuine challenge. Whether you are conducting deep research, saving long-form AI conversations, or just trying to organize your favorite digital resources, having a reliable <strong>bookmarker</strong> is no longer just a luxury—it is an absolute necessity. Welcome to RBookmark, the premier <strong>bookmarker app</strong> designed from the ground up to help you categorize, manage, and retrieve your most valuable data with unprecedented ease.
+    </p>
+    
+    <h3 class="text-xl font-semibold text-text-main mt-8">Why Do You Need a Dedicated Bookmarker?</h3>
+    <p>
+      The internet is vast, and built-in browser features often fall short when it comes to true organization. A standard <strong>bookmark</strong> saves a URL, but it doesn't preserve the context, the exact text snippet, or the nuances of a complex AI chat. This is where a <strong>custom bookmark</strong> solution becomes critical. With RBookmark, you are not just saving a link; you are capturing ideas in their entirety. As a highly versatile <strong>website bookmarker</strong>, our platform allows you to create dedicated folders, add searchable tags, and even store rich text directly in your dashboard. 
+    </p>
+    
+    <p>
+      Many users find themselves asking: should I use a traditional browser <strong>bookmark or bookmarker</strong> tool? The answer lies in the complexity of your workflow. If you only need to return to a simple homepage, a standard browser bookmark might suffice. However, if you are a developer, a student, a writer, or a researcher dealing with complex AI-generated outputs, specific code snippets, or lengthy articles, you need a powerful <strong>bookmarker</strong> capable of handling structured data securely. RBookmark fills this exact gap, serving as your personal, highly organized knowledge base.
+    </p>
+
+    <h3 class="text-xl font-semibold text-text-main mt-8">Features That Make RBookmark the Best Bookmarker App</h3>
+    <p>
+      What exactly sets RBookmark apart from any other generic <strong>website bookmarker</strong>? First and foremost, it is our <strong>custom bookmark</strong> organizational system. Instead of throwing all your saved items into a chaotic, endless list that is impossible to navigate, you can structure your knowledge into beautifully designed, distinct folders. 
+    </p>
+    <ul class="list-disc pl-6 space-y-3 mt-4">
+      <li><strong>Rich Text Editing & Preservation:</strong> Save exactly what matters. Use our Notion-style expanded view to read, edit, and organize your saved content. Your <strong>custom bookmark</strong> retains its formatting, making it perfect for code blocks or structured essays.</li>
+      <li><strong>Cloud Sync & Local Fallback:</strong> Whether you want your <strong>bookmarker app</strong> connected to the cloud via Supabase for cross-device synchronization, or you prefer a strictly local, privacy-first approach using your browser's storage, RBookmark adapts to your specific security needs.</li>
+      <li><strong>Lightning Fast Search:</strong> Our <strong>bookmarker</strong> comes equipped with instant, real-time search capabilities. You can locate any specific <strong>custom bookmark</strong> by querying its title, its content body, or its associated tags instantly.</li>
+      <li><strong>Advanced Export Capabilities:</strong> Unlike a standard browser <strong>bookmark</strong>, our robust tool allows you to export your saved text directly to beautiful PDF documents or plain TXT files. This gives you total ownership and portability of your data.</li>
+    </ul>
+
+    <h3 class="text-xl font-semibold text-text-main mt-8">The Future of the Website Bookmarker</h3>
+    <p>
+      The frustrating days of disorganized folders, dead links, and lost context are finally over. When considering whether to rely on a native OS <strong>bookmark or bookmarker</strong> utility designed for the modern web, remember that a dedicated <strong>bookmarker app</strong> provides features specifically tailored for deep, uninterrupted work. RBookmark ensures that every single <strong>custom bookmark</strong> you create is safely stored, easily retrievable, and beautifully formatted. 
+    </p>
+    <p>
+      We understand that an effective <strong>website bookmarker</strong> must be fast, responsive, and reliable across all devices. That is why our application is built using cutting-edge web technologies, ensuring a seamless experience whether you are on a desktop workstation or a mobile device.
+    </p>
+    <p>
+      Start using RBookmark today to completely transform how you save and interact with the web. Our ongoing mission is to provide the most intuitive, visually appealing, and robust <strong>website bookmarker</strong> experience available anywhere. Save your best ideas, safely categorize your AI chats, organize your research, and never lose a crucial piece of information again. Experience the profound difference a true, dedicated <strong>bookmarker</strong> makes in your daily productivity.
+    </p>
+  </section>
+
   <BookmarkModals />
 
 </Layout>
@@ -45,10 +84,33 @@ import BookmarkModals from '../components/BookmarkModals.astro';
   import { getFolders, type Folder } from '../lib/dataClient';
   
   async function updateView() {
-    const folders = await getFolders();
     const container = document.getElementById('folders-container');
     const emptyState = document.getElementById('empty-state');
     if (!container || !emptyState) return;
+
+    // Show loading skeleton
+    container.innerHTML = `
+      <div class="glass-panel p-6 animate-pulse flex items-center justify-between shadow-md">
+        <div class="flex items-center gap-4">
+          <div class="p-3 w-12 h-12 rounded-xl bg-surface-700 border border-surface-600"></div>
+          <div class="w-32 h-6 rounded bg-surface-700"></div>
+        </div>
+        <div class="w-5 h-5 rounded bg-surface-700"></div>
+      </div>
+      <div class="glass-panel p-6 animate-pulse flex items-center justify-between shadow-md">
+        <div class="flex items-center gap-4">
+          <div class="p-3 w-12 h-12 rounded-xl bg-surface-700 border border-surface-600"></div>
+          <div class="w-32 h-6 rounded bg-surface-700"></div>
+        </div>
+        <div class="w-5 h-5 rounded bg-surface-700"></div>
+      </div>
+    `;
+    emptyState.classList.add('hidden');
+    emptyState.classList.remove('flex');
+    container.classList.remove('hidden');
+
+    let folders = await getFolders();
+    folders = folders.filter((f: Folder) => f.name.toLowerCase() !== 'clipboard');
 
     if (folders.length === 0) {
       container.classList.add('hidden');

@@ -24,4 +24,4 @@ pnpm-debug.log*
 .idea/
 
 schema.sql
-
+steupsupabase.astro

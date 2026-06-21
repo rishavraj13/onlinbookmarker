@@ -16,11 +16,30 @@ const { title } = Astro.props;
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="description" content="AI Chat Bookmarker - Save and manage your favorite AI conversations" />
+    <meta name="description" content="The ultimate custom bookmarker app. Save, organize, and manage your website bookmarks and AI conversations securely with the best bookmarker tool." />
+    <meta name="keywords" content="bookmarker, bookmark, custom bookmark, bookmark or bookmarker, bookmarker app, website bookmarker" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="{title} | RBookmark - Custom Bookmarker App" />
+    <meta property="og:description" content="The ultimate custom bookmarker app. Save, organize, and manage your website bookmarks securely." />
+    <meta property="og:image" content="/og-image.jpg" />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="{title} | RBookmark - Custom Bookmarker App" />
+    <meta property="twitter:description" content="The ultimate custom bookmarker app. Save, organize, and manage your website bookmarks securely." />
+    <meta property="twitter:image" content="/og-image.jpg" />
+
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="RBookmark" />
+    <link rel="manifest" href="/site.webmanifest" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} | AI Bookmark</title>
+    <title>{title} | RBookmark - Bookmarker App</title>
     
     <!-- Smooth View Transitions -->
     <ClientRouter />
@@ -36,7 +55,7 @@ const { title } = Astro.props;
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest" defer></script>
   </head>
-  <body class="flex flex-col md:flex-row min-h-screen overflow-hidden relative">
+  <body class="flex flex-col md:flex-row min-h-screen md:overflow-hidden relative bg-surface-950 text-text-main">
     
     {isSupabaseConfigured && <Auth />}
 
@@ -52,7 +71,15 @@ const { title } = Astro.props;
       </div>
       
       <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6" id="sidebar-nav">
-
+        <!-- Main Navigation -->
+        <div>
+          <nav class="flex flex-col gap-1">
+            <a href="/clipboard" class={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all group ${Astro.url.pathname === '/clipboard' ? 'bg-surface-800 text-text-main border border-surface-700 shadow-md shadow-black/20' : 'text-surface-500 hover:text-text-main hover:bg-surface-700/50 border border-transparent'}`}>
+              <i data-lucide="clipboard-list" class={`w-5 h-5 ${Astro.url.pathname === '/clipboard' ? 'text-primary-500' : 'group-hover:text-primary-500'} transition-colors`}></i>
+              <span class="font-medium">Clipboard</span>
+            </a>
+          </nav>
+        </div>
 
         <!-- Custom Folders -->
         <div>
@@ -81,7 +108,7 @@ const { title } = Astro.props;
     </aside>
 
     <!-- Main Content -->
-    <main class="flex-1 p-4 md:p-8 h-screen overflow-y-auto relative z-0 pb-24 md:pb-8">
+    <main class="flex-1 p-4 md:p-8 md:h-screen md:overflow-y-auto relative z-0 pb-28 md:pb-8">
       <!-- Ambient background glow -->
       <div class="fixed top-[-20%] right-[-10%] w-[600px] h-[600px] rounded-full bg-primary-600/10 blur-[120px] pointer-events-none -z-10"></div>
       <div class="fixed bottom-[-20%] left-[10%] w-[500px] h-[500px] rounded-full bg-purple-600/10 blur-[120px] pointer-events-none -z-10"></div>
@@ -93,17 +120,21 @@ const { title } = Astro.props;
 
     <!-- Mobile Bottom Bar -->
     <div class="md:hidden glass-panel rounded-none border-x-0 border-b-0 fixed bottom-0 left-0 w-full z-50 flex items-center justify-around p-3 pb-safe">
-      <a href="/folders" class="flex flex-col items-center gap-1 text-surface-400 hover:text-primary-500">
-        <i data-lucide="folder" class="w-5 h-5"></i>
-        <span class="text-[10px]">Folders</span>
+      <a href="/" class={`flex flex-col items-center gap-1 ${Astro.url.pathname === '/' ? 'text-primary-500' : 'text-surface-400 hover:text-primary-500'}`}>
+        <i data-lucide="home" class="w-5 h-5"></i>
+        <span class="text-[10px]">Home</span>
+      </a>
+      <a href="/clipboard" class={`flex flex-col items-center gap-1 ${Astro.url.pathname === '/clipboard' ? 'text-primary-500' : 'text-surface-400 hover:text-primary-500'}`}>
+        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+        <span class="text-[10px]">Clipboard</span>
       </a>
       <button id="btn-add-bookmark-mobile" class="bg-primary-500 text-white p-3 rounded-full shadow-lg shadow-primary-500/30 transform -translate-y-4">
         <i data-lucide="plus" class="w-6 h-6"></i>
       </button>
-      <a href="/settings" class="flex flex-col items-center gap-1 text-surface-400 hover:text-primary-500">
-        <i data-lucide="settings" class="w-5 h-5"></i>
-        <span class="text-[10px]">Options</span>
-      </a>
+      <button id="btn-new-folder-mobile" class="flex flex-col items-center gap-1 text-surface-400 hover:text-primary-500">
+        <i data-lucide="folder-plus" class="w-5 h-5"></i>
+        <span class="text-[10px]">Folder</span>
+      </button>
     </div>
 
     <!-- Global Modals Container -->
@@ -122,9 +153,19 @@ const { title } = Astro.props;
       }
 
       async function loadCustomFolders() {
-        const folders = await getFolders();
         const container = document.getElementById('custom-folders-list');
         if (!container) return;
+
+        container.innerHTML = `
+          <div class="px-3 py-2 flex flex-col gap-2">
+            <div class="w-full h-8 rounded-lg bg-surface-800 animate-pulse"></div>
+            <div class="w-3/4 h-8 rounded-lg bg-surface-800 animate-pulse"></div>
+            <div class="w-5/6 h-8 rounded-lg bg-surface-800 animate-pulse"></div>
+          </div>
+        `;
+
+        let folders = await getFolders();
+        folders = folders.filter((f: Folder) => f.name.toLowerCase() !== 'clipboard');
         
         container.innerHTML = folders.length ? '' : '<div class="px-3 py-2 text-xs text-surface-500 italic">No custom folders yet.</div>';
         
@@ -160,11 +201,13 @@ const { title } = Astro.props;
         const btnGlobal = document.getElementById('btn-add-bookmark-global');
         const btnMobile = document.getElementById('btn-add-bookmark-mobile');
         const btnNewFolderSidebar = document.getElementById('btn-new-folder-sidebar');
+        const btnNewFolderMobile = document.getElementById('btn-new-folder-mobile');
         const btnLogout = document.getElementById('btn-logout');
         
         if (btnGlobal) btnGlobal.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openBookmarkModal')));
         if (btnMobile) btnMobile.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openBookmarkModal')));
         if (btnNewFolderSidebar) btnNewFolderSidebar.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openFolderModal')));
+        if (btnNewFolderMobile) btnNewFolderMobile.addEventListener('click', () => window.dispatchEvent(new CustomEvent('openFolderModal')));
         
         if (btnLogout) {
           btnLogout.addEventListener('click', async () => {

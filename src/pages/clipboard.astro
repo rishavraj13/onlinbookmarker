@@ -1,0 +1,563 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BookmarkModals from '../components/BookmarkModals.astro';
+---
+
+<Layout title="Clipboard">
+  <div class="flex flex-col h-full max-w-3xl mx-auto relative h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]">
+    
+    <header class="flex-shrink-0 flex items-center gap-3 py-4 border-b border-surface-800 mb-4 px-2">
+      <div class="w-10 h-10 rounded-full bg-primary-500/20 flex items-center justify-center text-primary-400">
+        <i data-lucide="clipboard-list" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-xl font-bold text-text-main leading-tight">Clipboard</h1>
+        <p class="text-xs text-surface-400">Message yourself to save quick notes & links</p>
+      </div>
+    </header>
+
+    <div class="flex-1 overflow-y-auto px-2 space-y-4 pb-4" id="clipboard-messages">
+      <!-- Loading State -->
+      <div class="flex justify-end animate-pulse">
+        <div class="bg-surface-800 rounded-2xl rounded-tr-sm px-4 py-3 max-w-[80%] md:max-w-[70%]">
+          <div class="w-32 h-4 bg-surface-700 rounded mb-2"></div>
+          <div class="w-48 h-4 bg-surface-700 rounded"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Message Input Area -->
+    <div class="flex-shrink-0 mt-4 bg-surface-900/80 backdrop-blur-md border border-surface-700 rounded-2xl p-2 flex items-end gap-2 shadow-lg mb-12 md:mb-0">
+      <input type="file" id="clipboard-file-input" class="hidden" accept="image/*,video/*,.pdf,.doc,.docx,.txt" />
+      <button 
+        id="btn-attach-file"
+        class="w-10 h-10 rounded-full text-surface-400 hover:text-primary-400 hover:bg-surface-800 flex items-center justify-center flex-shrink-0 transition-colors"
+        title="Attach File"
+      >
+        <i data-lucide="paperclip" class="w-5 h-5"></i>
+      </button>
+      <button 
+        id="btn-record-audio"
+        class="w-10 h-10 rounded-full text-surface-400 hover:text-red-400 hover:bg-surface-800 flex items-center justify-center flex-shrink-0 transition-colors"
+        title="Record Audio"
+      >
+        <i data-lucide="mic" class="w-5 h-5" id="icon-mic"></i>
+      </button>
+      <div id="input-container" class="flex-1 relative flex items-center min-h-[40px]">
+        <textarea
+          id="clipboard-input"
+          rows="1"
+          class="w-full bg-transparent border-none text-text-main placeholder-surface-500 focus:ring-0 resize-none py-2 text-sm max-h-32 focus:outline-none"
+          placeholder="Type a note or attach a file..."
+        ></textarea>
+        <canvas id="audio-visualizer" class="absolute inset-0 w-full h-full hidden pointer-events-none z-10"></canvas>
+        <div id="recording-overlay" class="absolute inset-0 w-full h-full hidden flex items-center justify-between px-3 z-20 pointer-events-none">
+          <div class="flex items-center gap-2 flex-shrink-0 bg-surface-900/80 px-2 py-1 rounded-md backdrop-blur-sm pointer-events-auto">
+            <button id="btn-discard-audio" class="text-surface-400 hover:text-red-400 p-1 rounded-md transition-colors mr-1" title="Discard">
+              <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+            <div class="w-2 h-2 rounded-full bg-red-500 animate-pulse" id="recording-dot"></div>
+            <span id="recording-timer" class="text-sm font-mono text-red-400 font-medium">00:00</span>
+          </div>
+          <button id="btn-pause-resume" class="text-surface-300 hover:text-white p-2 rounded-lg bg-surface-800/90 hover:bg-surface-700 transition-colors shadow-sm border border-surface-700/50 pointer-events-auto" title="Pause / Resume">
+            <i data-lucide="pause" class="w-4 h-4" id="icon-pause-resume"></i>
+          </button>
+        </div>
+      </div>
+      <button 
+        id="btn-send-clipboard"
+        class="w-10 h-10 rounded-full bg-primary-600 hover:bg-primary-500 text-white flex items-center justify-center flex-shrink-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <i data-lucide="send" class="w-4 h-4 ml-1"></i>
+      </button>
+    </div>
+  </div>
+
+  <BookmarkModals />
+</Layout>
+
+<script>
+  import { getFolders, saveFolder, getBookmarks, saveBookmark, deleteBookmark, type Folder, type Bookmark } from '../lib/dataClient';
+  import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+
+  let clipboardFolderId = '';
+  let mediaRecorder: MediaRecorder | null = null;
+  let audioChunks: Blob[] = [];
+  let isRecording = false;
+  let isDiscarding = false;
+  let isPaused = false;
+  let recordingSeconds = 0;
+  let timerInterval: number | null = null;
+  
+  let audioContext: AudioContext | null = null;
+  let analyser: AnalyserNode | null = null;
+  let animationFrameId: number | null = null;
+
+  async function initClipboard() {
+    // 1. Find or create the Clipboard folder
+    let folders = await getFolders();
+    let clipboardFolder = folders.find((f: Folder) => f.name.toLowerCase() === 'clipboard');
+    
+    if (!clipboardFolder) {
+      await saveFolder('Clipboard');
+      // Adding a small delay to ensure event propagation if needed, though await should be enough
+      folders = await getFolders();
+      clipboardFolder = folders.find((f: Folder) => f.name.toLowerCase() === 'clipboard');
+    }
+
+    if (clipboardFolder) {
+      clipboardFolderId = clipboardFolder.id;
+      renderMessages();
+    }
+  }
+
+  function formatTime(isoString: string) {
+    const d = new Date(isoString);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function formatTimer(totalSeconds: number) {
+    const m = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+    const s = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  // Simple URL detection and File rendering
+  function formatContent(text: string) {
+    if (text.startsWith('FILE:')) {
+      try {
+        const payload = JSON.parse(text.substring(5));
+        if (payload.type.startsWith('image/')) {
+          return `<a href="${payload.data}" target="_blank"><img src="${payload.data}" class="max-w-full rounded-lg max-h-64 object-contain mt-1 border border-surface-700/50" alt="${payload.name}"></a>`;
+        } else if (payload.type.startsWith('video/')) {
+          return `<video src="${payload.data}" controls class="max-w-full rounded-lg max-h-64 object-contain mt-1 border border-surface-700/50"></video>`;
+        } else if (payload.type.startsWith('audio/')) {
+          return `<audio src="${payload.data}" controls class="max-w-full mt-1"></audio>`;
+        } else {
+          return `
+            <a href="${payload.data}" download="${payload.name}" class="flex items-center gap-3 bg-surface-800/80 p-3 rounded-xl hover:bg-surface-700 transition-colors mt-1 border border-surface-700/50 min-w-[200px]">
+              <div class="bg-primary-500/20 p-2 rounded-lg text-primary-400 flex-shrink-0">
+                <i data-lucide="file" class="w-5 h-5"></i>
+              </div>
+              <div class="flex flex-col overflow-hidden">
+                <span class="text-sm font-medium text-text-main truncate">${payload.name}</span>
+                <span class="text-[10px] text-surface-400 uppercase">Click to download</span>
+              </div>
+            </a>
+          `;
+        }
+      } catch (e) {
+        // fallback to standard rendering if parse fails
+      }
+    }
+
+    const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    return escaped.replace(urlRegex, function(url) {
+        return `<a href="${url}" target="_blank" class="text-primary-300 hover:underline break-all">${url}</a>`;
+    }).replace(/\n/g, '<br>');
+  }
+
+  async function renderMessages() {
+    if (!clipboardFolderId) return;
+    
+    const allBookmarks = await getBookmarks();
+    // Sort ascending for chat view (oldest at top, newest at bottom)
+    const messages = allBookmarks
+      .filter((b: Bookmark) => b.folder_id === clipboardFolderId)
+      .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+    const container = document.getElementById('clipboard-messages');
+    if (!container) return;
+
+    if (messages.length === 0) {
+      container.innerHTML = `
+        <div class="h-full flex flex-col items-center justify-center text-surface-500 gap-3 opacity-60">
+          <i data-lucide="lock" class="w-8 h-8"></i>
+          <p class="text-sm text-center max-w-[200px]">Messages and links saved here are kept securely in your own folder.</p>
+        </div>
+      `;
+      // @ts-ignore
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = messages.map(msg => `
+      <div class="flex justify-end group">
+        <div class="bg-primary-600/90 text-text-main rounded-2xl rounded-tr-sm px-4 py-2.5 max-w-[85%] md:max-w-[75%] shadow-md relative">
+          <div class="text-[15px] leading-relaxed break-words">${formatContent(msg.content)}</div>
+          <div class="flex items-center justify-end gap-2 mt-1.5 opacity-70">
+            <span class="text-[10px] uppercase tracking-wider">${formatTime(msg.created_at)}</span>
+            <button class="btn-delete-msg opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-300" data-id="${msg.id}" title="Delete">
+              <i data-lucide="trash-2" class="w-3 h-3"></i>
+            </button>
+            <button class="btn-copy-msg opacity-0 group-hover:opacity-100 transition-opacity hover:text-white" data-content="${encodeURIComponent(msg.content)}" title="Copy">
+              <i data-lucide="copy" class="w-3 h-3"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+
+    // @ts-ignore
+    if (window.lucide) window.lucide.createIcons();
+    
+    // Auto-scroll to bottom
+    container.scrollTop = container.scrollHeight;
+
+    // Attach listeners
+    document.querySelectorAll('.btn-delete-msg').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const id = (e.currentTarget as HTMLElement).dataset.id;
+        if (id && confirm('Delete this message?')) {
+          await deleteBookmark(id);
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-copy-msg').forEach(btn => {
+      btn.addEventListener('click', async (e) => {
+        const content = decodeURIComponent((e.currentTarget as HTMLElement).dataset.content || '');
+        navigator.clipboard.writeText(content);
+        const icon = btn.querySelector('i');
+        if (icon) {
+          icon.setAttribute('data-lucide', 'check');
+          // @ts-ignore
+          if (window.lucide) window.lucide.createIcons();
+          setTimeout(() => {
+            icon.setAttribute('data-lucide', 'copy');
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+          }, 2000);
+        }
+      });
+    });
+  }
+
+  function drawVisualizer() {
+    const canvas = document.getElementById('audio-visualizer') as HTMLCanvasElement;
+    if (!canvas || !analyser) return;
+    
+    const canvasCtx = canvas.getContext('2d');
+    if (!canvasCtx) return;
+
+    // Match internal resolution to CSS size
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    const draw = () => {
+      if (!isRecording) return;
+      animationFrameId = requestAnimationFrame(draw);
+
+      analyser!.getByteTimeDomainData(dataArray);
+
+      canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+      canvasCtx.lineWidth = 2;
+      canvasCtx.strokeStyle = '#ef4444'; // Tailwind text-red-500
+      canvasCtx.beginPath();
+
+      const sliceWidth = canvas.width * 1.0 / bufferLength;
+      let x = 0;
+
+      for (let i = 0; i < bufferLength; i++) {
+        const v = dataArray[i] / 128.0;
+        const y = v * canvas.height / 2;
+
+        if (i === 0) {
+          canvasCtx.moveTo(x, y);
+        } else {
+          canvasCtx.lineTo(x, y);
+        }
+        x += sliceWidth;
+      }
+
+      canvasCtx.lineTo(canvas.width, canvas.height / 2);
+      canvasCtx.stroke();
+    };
+
+    draw();
+  }
+
+  function setupInput() {
+    const input = document.getElementById('clipboard-input') as HTMLTextAreaElement;
+    const btnSend = document.getElementById('btn-send-clipboard') as HTMLButtonElement;
+    const fileInput = document.getElementById('clipboard-file-input') as HTMLInputElement;
+    const btnAttach = document.getElementById('btn-attach-file') as HTMLButtonElement;
+    const btnRecord = document.getElementById('btn-record-audio') as HTMLButtonElement;
+    const iconMic = document.getElementById('icon-mic');
+    const btnPauseResume = document.getElementById('btn-pause-resume') as HTMLButtonElement;
+    const iconPauseResume = document.getElementById('icon-pause-resume');
+    const btnDiscardAudio = document.getElementById('btn-discard-audio') as HTMLButtonElement;
+    
+    if (!input || !btnSend) return;
+
+    if (btnDiscardAudio) {
+      btnDiscardAudio.onclick = () => {
+        if (!isRecording) return;
+        isDiscarding = true;
+        btnRecord.click(); // Stop recording and clean up UI, dropping the payload
+      };
+    }
+
+    if (btnPauseResume && iconPauseResume) {
+      btnPauseResume.onclick = () => {
+        if (!mediaRecorder) return;
+        
+        if (isPaused) {
+          mediaRecorder.resume();
+          isPaused = false;
+          iconPauseResume.setAttribute('data-lucide', 'pause');
+          const dot = document.getElementById('recording-dot');
+          if (dot) dot.classList.add('animate-pulse', 'bg-red-500');
+          if (dot) dot.classList.remove('bg-surface-500');
+        } else {
+          mediaRecorder.pause();
+          isPaused = true;
+          iconPauseResume.setAttribute('data-lucide', 'play');
+          const dot = document.getElementById('recording-dot');
+          if (dot) dot.classList.remove('animate-pulse', 'bg-red-500');
+          if (dot) dot.classList.add('bg-surface-500');
+        }
+        // @ts-ignore
+        if (window.lucide) window.lucide.createIcons();
+      };
+    }
+
+    if (btnRecord && iconMic) {
+      btnRecord.onclick = async () => {
+        if (!isRecording) {
+          try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
+
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = () => {
+              if (isDiscarding) {
+                isDiscarding = false;
+                return; // Discard audio and bypass saving
+              }
+
+              const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+              
+              if (audioBlob.size > 5 * 1024 * 1024) {
+                alert("Audio recording is too large (over 5MB).");
+                return;
+              }
+
+              const reader = new FileReader();
+              reader.onload = async (event) => {
+                const base64data = event.target?.result as string;
+                
+                const filePayload = JSON.stringify({
+                  name: `Voice_Message_${Date.now()}.webm`,
+                  type: 'audio/webm',
+                  data: base64data
+                });
+
+                const newId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+
+                await saveBookmark({
+                  id: newId,
+                  title: `Voice Message`,
+                  folder_id: clipboardFolderId,
+                  content: `FILE:${filePayload}`,
+                  tags: ['clipboard', 'audio'],
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              };
+              reader.readAsDataURL(audioBlob);
+            };
+
+            mediaRecorder.start();
+            isRecording = true;
+            btnRecord.classList.add('bg-red-500/20', 'text-red-500', 'animate-pulse');
+            iconMic.setAttribute('data-lucide', 'square');
+            
+            // Setup Web Audio API
+            audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 2048;
+            source.connect(analyser);
+
+            const overlay = document.getElementById('recording-overlay');
+            const timerEl = document.getElementById('recording-timer');
+            recordingSeconds = 0;
+            isPaused = false;
+            
+            if (timerEl) timerEl.textContent = "00:00";
+            if (overlay) overlay.classList.remove('hidden');
+
+            timerInterval = window.setInterval(() => {
+              if (!isPaused) {
+                recordingSeconds++;
+                if (timerEl) timerEl.textContent = formatTimer(recordingSeconds);
+              }
+            }, 1000);
+
+            const canvas = document.getElementById('audio-visualizer') as HTMLCanvasElement;
+            if (canvas) canvas.classList.remove('hidden');
+
+            input.value = '';
+            input.disabled = true;
+            input.classList.add('opacity-0'); // Hide text so wave takes center stage
+
+            btnSend.disabled = false;
+            btnSend.classList.add('shadow-lg', 'shadow-primary-500/50');
+
+            drawVisualizer();
+
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+
+          } catch (err) {
+            console.error('Error accessing microphone:', err);
+            alert('Could not access microphone. Please ensure you have granted permission.');
+          }
+        } else {
+          // Stop recording
+          if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+          }
+          isRecording = false;
+
+          if (animationFrameId) cancelAnimationFrame(animationFrameId);
+          if (audioContext && audioContext.state !== 'closed') audioContext.close();
+          if (timerInterval) clearInterval(timerInterval);
+
+          btnRecord.classList.remove('bg-red-500/20', 'text-red-500', 'animate-pulse');
+          iconMic.setAttribute('data-lucide', 'mic');
+          
+          const canvas = document.getElementById('audio-visualizer') as HTMLCanvasElement;
+          if (canvas) canvas.classList.add('hidden');
+          
+          const overlay = document.getElementById('recording-overlay');
+          if (overlay) overlay.classList.add('hidden');
+
+          input.placeholder = "Type a note or attach a file...";
+          input.disabled = false;
+          input.classList.remove('opacity-0', 'opacity-50');
+          
+          btnSend.disabled = input.value.trim() === '';
+          btnSend.classList.remove('shadow-lg', 'shadow-primary-500/50');
+          // @ts-ignore
+          if (window.lucide) window.lucide.createIcons();
+        }
+      };
+    }
+
+    if (btnAttach && fileInput) {
+      btnAttach.onclick = () => fileInput.click();
+
+      fileInput.onchange = async (e) => {
+        const file = (e.target as HTMLInputElement).files?.[0];
+        if (!file || !clipboardFolderId) return;
+
+        // 5MB limit for Base64 string payload
+        if (file.size > 5 * 1024 * 1024) {
+          alert("File is too large! Please select a file smaller than 5MB.");
+          fileInput.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+          const base64data = event.target?.result as string;
+          
+          const filePayload = JSON.stringify({
+            name: file.name,
+            type: file.type,
+            data: base64data
+          });
+
+          const newId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+          
+          btnSend.disabled = true;
+          input.placeholder = "Uploading...";
+
+          await saveBookmark({
+            id: newId,
+            title: `File: ${file.name}`,
+            folder_id: clipboardFolderId,
+            content: `FILE:${filePayload}`,
+            tags: ['clipboard', 'file'],
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+
+          input.placeholder = "Type a note or attach a file...";
+          fileInput.value = '';
+        };
+        reader.readAsDataURL(file);
+      };
+    }
+
+    // Auto-resize textarea
+    input.oninput = () => {
+      input.style.height = 'auto';
+      input.style.height = Math.min(input.scrollHeight, 128) + 'px';
+      btnSend.disabled = input.value.trim() === '';
+    };
+
+    const sendMessage = async () => {
+      if (isRecording) {
+        btnRecord.click();
+        return;
+      }
+
+      const content = input.value.trim();
+      if (!content || !clipboardFolderId) return;
+
+      input.value = '';
+      input.style.height = 'auto';
+      btnSend.disabled = true;
+
+      const newId = crypto.randomUUID ? crypto.randomUUID() : Date.now().toString();
+      // Generate a short title from the content
+      const title = content.length > 20 ? content.substring(0, 20) + '...' : content;
+
+      await saveBookmark({
+        id: newId,
+        title: title,
+        folder_id: clipboardFolderId,
+        content: content,
+        tags: ['clipboard'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    };
+
+    btnSend.onclick = sendMessage;
+
+    input.onkeydown = (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+      }
+    };
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initClipboard();
+    setupInput();
+  });
+  
+  document.addEventListener('astro:page-load', () => {
+    initClipboard();
+    setupInput();
+  });
+  
+  window.addEventListener('bookmarksUpdated', renderMessages);
+  window.addEventListener('auth-changed', initClipboard);
+
+</script>

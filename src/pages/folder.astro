@@ -46,6 +46,35 @@ import BookmarkModals from '../components/BookmarkModals.astro';
     const urlParams = new URLSearchParams(window.location.search);
     currentFolderId = urlParams.get('id') || '';
     
+    const titleEl = document.getElementById('folder-title');
+    if (titleEl) titleEl.innerHTML = '<span class="animate-pulse bg-surface-700 rounded text-transparent h-10 w-48 inline-block">Loading...</span>';
+
+    const container = document.getElementById('bookmarks-container');
+    if (container) {
+      container.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="glass-panel p-5 animate-pulse flex flex-col h-[200px]">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 rounded-lg bg-surface-700"></div>
+              <div class="w-24 h-4 rounded bg-surface-700"></div>
+            </div>
+            <div class="w-3/4 h-6 rounded bg-surface-700 mb-2"></div>
+            <div class="flex-1 bg-surface-800 rounded-xl p-3 mb-4"></div>
+            <div class="w-1/2 h-4 rounded bg-surface-700 mt-auto"></div>
+          </div>
+          <div class="glass-panel p-5 animate-pulse flex flex-col h-[200px]">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="w-8 h-8 rounded-lg bg-surface-700"></div>
+              <div class="w-24 h-4 rounded bg-surface-700"></div>
+            </div>
+            <div class="w-3/4 h-6 rounded bg-surface-700 mb-2"></div>
+            <div class="flex-1 bg-surface-800 rounded-xl p-3 mb-4"></div>
+            <div class="w-1/2 h-4 rounded bg-surface-700 mt-auto"></div>
+          </div>
+        </div>
+      `;
+    }
+
     const folders = await getFolders();
     const folder = folders.find((f: Folder) => f.id === currentFolderId);
     
@@ -55,7 +84,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
       currentFolderName = 'Unknown Folder';
     }
 
-    const titleEl = document.getElementById('folder-title');
     if (titleEl) titleEl.textContent = currentFolderName;
 
     // Show delete button for all folders
@@ -73,7 +101,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
     const allBookmarks = await getBookmarks();
     const folderBookmarks = allBookmarks.filter((b: Bookmark) => b.folder_id === currentFolderId);
     
-    const container = document.getElementById('bookmarks-container');
     if (!container) return;
 
     if (folderBookmarks.length === 0) {
