@@ -1,4 +1,5 @@
 import type { Bookmark } from './dataClient';
+import { escapeHtml } from './sanitize';
 
 export function renderBookmarks(bookmarks: Bookmark[]): string {
   if (!bookmarks || bookmarks.length === 0) {
@@ -12,7 +13,7 @@ export function renderBookmarks(bookmarks: Bookmark[]): string {
     let colorClass = 'text-purple-400 bg-purple-500/10 border-purple-500/20';
 
     const tagsHtml = (b.tags || []).map((t: string) => 
-      `<span class="px-2 py-1 bg-surface-800 text-surface-300 rounded-md text-xs border border-surface-700/50">${t}</span>`
+      `<span class="px-2 py-1 bg-surface-800 text-surface-300 rounded-md text-xs border border-surface-700/50">${escapeHtml(t)}</span>`
     ).join('');
 
     const dateStr = new Date(b.created_at).toLocaleDateString(undefined, { 
@@ -27,7 +28,7 @@ export function renderBookmarks(bookmarks: Bookmark[]): string {
             <div class="p-1.5 rounded-lg border ${colorClass}">
               <i data-lucide="${icon}" class="w-4 h-4"></i>
             </div>
-            <span class="text-sm font-medium text-surface-200 capitalize">${platformName}</span>
+            <span class="text-sm font-medium text-surface-200 capitalize">${escapeHtml(platformName)}</span>
           </div>
           <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
             <button class="p-1.5 text-surface-400 hover:text-text-main rounded-md hover:bg-surface-700 transition-colors btn-expand-bookmark" data-id="${b.id}" title="Expand & Edit (Auto-save)">
@@ -54,10 +55,10 @@ export function renderBookmarks(bookmarks: Bookmark[]): string {
           </div>
         </div>
         
-        <h4 class="text-lg font-bold text-text-main mb-2 truncate" title="${b.title || 'Untitled'}">${b.title || 'Untitled'}</h4>
+        <h4 class="text-lg font-bold text-text-main mb-2 truncate" title="${escapeHtml(b.title || 'Untitled')}">${escapeHtml(b.title || 'Untitled')}</h4>
         
         <div class="flex-1 bg-surface-900/50 rounded-xl p-3 border border-surface-700/50 mb-4 overflow-hidden relative">
-          <div class="text-sm text-surface-300 line-clamp-4" style="white-space: pre-wrap;">${b.content}</div>
+          <div class="text-sm text-surface-300 line-clamp-4" style="white-space: pre-wrap;">${escapeHtml(b.content)}</div>
           <div class="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-surface-900/90 to-transparent pointer-events-none"></div>
         </div>
         

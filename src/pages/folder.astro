@@ -111,11 +111,9 @@ import BookmarkModals from '../components/BookmarkModals.astro';
           <p class="text-sm">Save a bookmark to this folder to see it here.</p>
         </div>
       `;
-      // @ts-ignore
       if (window.lucide) window.lucide.createIcons();
     } else {
       container.innerHTML = renderBookmarks(folderBookmarks);
-      // @ts-ignore
       if (window.lucide) window.lucide.createIcons();
       attachBookmarkListeners();
     }
@@ -133,12 +131,10 @@ import BookmarkModals from '../components/BookmarkModals.astro';
           if (icon) {
             icon.setAttribute('data-lucide', 'check');
             icon.classList.add('text-green-400');
-            // @ts-ignore
             if (window.lucide) window.lucide.createIcons();
             setTimeout(() => {
               icon.setAttribute('data-lucide', 'copy');
               icon.classList.remove('text-green-400');
-              // @ts-ignore
               if (window.lucide) window.lucide.createIcons();
             }, 2000);
           }
@@ -183,7 +179,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
         const id = (e.currentTarget as HTMLElement).dataset.id;
         const allBookmarks = await getBookmarks();
         const bm = allBookmarks.find((b: Bookmark) => b.id === id);
-        // @ts-ignore
         if (bm && window.html2pdf) {
           const element = document.createElement('div');
           element.style.padding = '20px';
@@ -192,7 +187,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
             <h2 style="margin-bottom: 20px; color: #111827;">${bm.folders?.name || 'Folder'} Bookmark: ${bm.title}</h2>
             <div style="white-space: pre-wrap; font-size: 14px; line-height: 1.6; color: #374151;">${bm.content}</div>
           `;
-          // @ts-ignore
           window.html2pdf().set({
             margin: 10,
             filename: `bookmark-${id}.pdf`,
@@ -246,7 +240,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
         if (container) {
           if (filtered.length > 0) {
             container.innerHTML = renderBookmarks(filtered);
-            // @ts-ignore
             if (window.lucide) window.lucide.createIcons();
             attachBookmarkListeners();
           } else {

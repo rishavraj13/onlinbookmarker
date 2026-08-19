@@ -99,7 +99,6 @@
       authContainer?.classList.remove('hidden');
     } else if (session && !isRecovery) {
       // User is logged in, attach to global window
-      // @ts-ignore
       window.currentUser = session.user;
       authContainer?.classList.add('hidden');
       window.dispatchEvent(new CustomEvent('auth-changed'));
@@ -122,13 +121,11 @@
         if (descEl) descEl.textContent = 'Please enter your new password below.';
       } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         if (!isRecoveringPassword) {
-          // @ts-ignore
-          window.currentUser = session?.user;
+          window.currentUser = session?.user || null;
           authContainer?.classList.add('hidden');
           window.dispatchEvent(new CustomEvent('auth-changed'));
         }
       } else if (event === 'SIGNED_OUT') {
-        // @ts-ignore
         window.currentUser = null;
         isRecoveringPassword = false;
         
@@ -166,7 +163,6 @@
       btn.disabled = true;
       btn.dataset.original = btn.innerHTML;
       btn.innerHTML = `<i data-lucide="loader-2" class="w-5 h-5 animate-spin"></i> ${text}`;
-      // @ts-ignore
       if (window.lucide) window.lucide.createIcons();
     };
     
@@ -246,7 +242,6 @@
         setTimeout(() => {
           isRecoveringPassword = false;
           authContainer?.classList.add('hidden');
-          // @ts-ignore
           if (window.currentUser) window.dispatchEvent(new CustomEvent('auth-changed'));
         }, 1500);
       }

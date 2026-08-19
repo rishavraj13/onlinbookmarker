@@ -79,6 +79,7 @@ import BookmarkModals from '../components/BookmarkModals.astro';
 <script>
   import { getFolders, saveFolder, getBookmarks, saveBookmark, deleteBookmark, type Folder, type Bookmark } from '../lib/dataClient';
   import { supabase, isSupabaseConfigured } from '../lib/supabaseClient';
+  import { escapeHtml } from '../lib/sanitize';
 
   let clipboardFolderId = '';
   let mediaRecorder: MediaRecorder | null = null;
@@ -128,19 +129,19 @@ import BookmarkModals from '../components/BookmarkModals.astro';
       try {
         const payload = JSON.parse(text.substring(5));
         if (payload.type.startsWith('image/')) {
-          return `<a href="${payload.data}" target="_blank"><img src="${payload.data}" class="max-w-full rounded-lg max-h-64 object-contain mt-1 border border-surface-700/50" alt="${payload.name}"></a>`;
+          return `<a href="${payload.data}" target="_blank"><img src="${payload.data}" class="max-w-full rounded-lg max-h-64 object-contain mt-1 border border-surface-700/50" alt="${escapeHtml(payload.name)}"></a>`;
         } else if (payload.type.startsWith('video/')) {
           return `<video src="${payload.data}" controls class="max-w-full rounded-lg max-h-64 object-contain mt-1 border border-surface-700/50"></video>`;
         } else if (payload.type.startsWith('audio/')) {
           return `<audio src="${payload.data}" controls class="max-w-full mt-1"></audio>`;
         } else {
           return `
-            <a href="${payload.data}" download="${payload.name}" class="flex items-center gap-3 bg-surface-800/80 p-3 rounded-xl hover:bg-surface-700 transition-colors mt-1 border border-surface-700/50 min-w-[200px]">
+            <a href="${payload.data}" download="${escapeHtml(payload.name)}" class="flex items-center gap-3 bg-surface-800/80 p-3 rounded-xl hover:bg-surface-700 transition-colors mt-1 border border-surface-700/50 min-w-[200px]">
               <div class="bg-primary-500/20 p-2 rounded-lg text-primary-400 flex-shrink-0">
                 <i data-lucide="file" class="w-5 h-5"></i>
               </div>
               <div class="flex flex-col overflow-hidden">
-                <span class="text-sm font-medium text-text-main truncate">${payload.name}</span>
+                <span class="text-sm font-medium text-text-main truncate">${escapeHtml(payload.name)}</span>
                 <span class="text-[10px] text-surface-400 uppercase">Click to download</span>
               </div>
             </a>
@@ -151,7 +152,7 @@ import BookmarkModals from '../components/BookmarkModals.astro';
       }
     }
 
-    const escaped = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const escaped = escapeHtml(text);
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     return escaped.replace(urlRegex, function(url) {
         return `<a href="${url}" target="_blank" class="text-primary-300 hover:underline break-all">${url}</a>`;
@@ -177,7 +178,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
           <p class="text-sm text-center max-w-[200px]">Messages and links saved here are kept securely in your own folder.</p>
         </div>
       `;
-      // @ts-ignore
       if (window.lucide) window.lucide.createIcons();
       return;
     }
@@ -199,7 +199,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
       </div>
     `).join('');
 
-    // @ts-ignore
     if (window.lucide) window.lucide.createIcons();
     
     // Auto-scroll to bottom
@@ -222,11 +221,9 @@ import BookmarkModals from '../components/BookmarkModals.astro';
         const icon = btn.querySelector('i');
         if (icon) {
           icon.setAttribute('data-lucide', 'check');
-          // @ts-ignore
           if (window.lucide) window.lucide.createIcons();
           setTimeout(() => {
             icon.setAttribute('data-lucide', 'copy');
-            // @ts-ignore
             if (window.lucide) window.lucide.createIcons();
           }, 2000);
         }
@@ -322,7 +319,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
           if (dot) dot.classList.remove('animate-pulse', 'bg-red-500');
           if (dot) dot.classList.add('bg-surface-500');
         }
-        // @ts-ignore
         if (window.lucide) window.lucide.createIcons();
       };
     }
@@ -416,7 +412,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
 
             drawVisualizer();
 
-            // @ts-ignore
             if (window.lucide) window.lucide.createIcons();
 
           } catch (err) {
@@ -450,7 +445,6 @@ import BookmarkModals from '../components/BookmarkModals.astro';
           
           btnSend.disabled = input.value.trim() === '';
           btnSend.classList.remove('shadow-lg', 'shadow-primary-500/50');
-          // @ts-ignore
           if (window.lucide) window.lucide.createIcons();
         }
       };

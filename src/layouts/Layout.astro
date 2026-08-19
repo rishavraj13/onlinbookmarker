@@ -146,7 +146,6 @@ const { title } = Astro.props;
 
       // Make setup function reusable across navigations
       function setupApp() {
-        // @ts-ignore
         if (window.lucide) window.lucide.createIcons();
         
         loadCustomFolders();
@@ -187,7 +186,6 @@ const { title } = Astro.props;
         });
         
         // Re-initialize icons for new DOM elements
-        // @ts-ignore
         if (window.lucide) window.lucide.createIcons();
       }
 
@@ -213,7 +211,6 @@ const { title } = Astro.props;
           btnLogout.addEventListener('click', async () => {
             (btnLogout as HTMLButtonElement).disabled = true;
             btnLogout.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Signing Out...`;
-            // @ts-ignore
             if (window.lucide) window.lucide.createIcons();
             
             await supabase?.auth.signOut();

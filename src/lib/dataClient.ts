@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from './supabaseClient';
 export interface Folder {
   id: string;
   name: string;
+  is_system?: boolean;
 }
 
 export interface Bookmark {
@@ -16,6 +17,9 @@ export interface Bookmark {
   folders?: { name: string }; // from join
 }
 
+export type BookmarkInsert = Omit<Bookmark, 'id' | 'created_at' | 'updated_at' | 'folders'>;
+export type BookmarkUpdate = Pick<Bookmark, 'id'> & Partial<Omit<Bookmark, 'id' | 'folders'>>;
+
 export async function getFolders(): Promise<Folder[]> {
   if (!isSupabaseConfigured || !supabase) {
     let folders = JSON.parse(localStorage.getItem('gpt_bookmark_folders_v2') || 'null');
@@ -26,7 +30,6 @@ export async function getFolders(): Promise<Folder[]> {
     return folders;
   }
   
-  // @ts-ignore
   if (!window.currentUser) return [];
 
   let { data, error } = await supabase
@@ -53,12 +56,15 @@ export async function saveFolder(name: string) {
     return;
   }
 
-  // @ts-ignore
   if (!window.currentUser) return;
+  
+  const folders = await getFolders();
+  if (folders.find(f => f.name.toLowerCase() === name.toLowerCase())) {
+    return;
+  }
   
   const { error } = await supabase.from('folders').insert({
     name,
-    // @ts-ignore
     user_id: window.currentUser.id
   });
   
@@ -94,13 +100,12 @@ export async function getBookmarks(): Promise<Bookmark[]> {
     const bookmarks = JSON.parse(localStorage.getItem('gpt_bookmarks_v2') || '[]');
     const folders = await getFolders();
     // simulate join
-    return bookmarks.map((b: any) => {
+    return bookmarks.map((b: Bookmark) => {
       const folder = folders.find(f => f.id === b.folder_id);
       return { ...b, folders: { name: folder ? folder.name : 'Unknown' } };
     });
   }
   
-  // @ts-ignore
   if (!window.currentUser) return [];
 
   const { data, error } = await supabase
@@ -115,12 +120,13 @@ export async function getBookmarks(): Promise<Bookmark[]> {
   return data as Bookmark[];
 }
 
-export async function saveBookmark(bookmark: any, isEdit: boolean = false) {
+export async function saveBookmark(bookmark: BookmarkInsert | BookmarkUpdate, isEdit: boolean = false) {
   if (!isSupabaseConfigured || !supabase) {
     const bookmarks = JSON.parse(localStorage.getItem('gpt_bookmarks_v2') || '[]');
     if (isEdit) {
-      const index = bookmarks.findIndex((b: any) => b.id === bookmark.id);
-      if (index !== -1) bookmarks[index] = bookmark;
+      const updatePayload = bookmark as BookmarkUpdate;
+      const index = bookmarks.findIndex((b: Bookmark) => b.id === updatePayload.id);
+      if (index !== -1) bookmarks[index] = { ...bookmarks[index], ...bookmark };
     } else {
       bookmarks.unshift(bookmark);
     }
@@ -129,19 +135,16 @@ export async function saveBookmark(bookmark: any, isEdit: boolean = false) {
     return;
   }
 
-  // @ts-ignore
   if (!window.currentUser) return;
   
-  const payload = {
-    ...bookmark,
-    // @ts-ignore
-    user_id: window.currentUser.id
-  };
-  
   if (isEdit) {
-    const { error } = await supabase.from('bookmarks').update(payload).eq('id', bookmark.id);
+    const updatePayload = bookmark as BookmarkUpdate;
+    const payload = { ...updatePayload, user_id: window.currentUser.id };
+    const { error } = await supabase.from('bookmarks').update(payload).eq('id', updatePayload.id);
     if (error) console.error('Error updating bookmark:', error);
   } else {
+    const insertPayload = bookmark as BookmarkInsert;
+    const payload = { ...insertPayload, user_id: window.currentUser.id };
     const { error } = await supabase.from('bookmarks').insert(payload);
     if (error) console.error('Error inserting bookmark:', error);
   }
@@ -152,7 +155,7 @@ export async function saveBookmark(bookmark: any, isEdit: boolean = false) {
 export async function deleteBookmark(id: string) {
   if (!isSupabaseConfigured || !supabase) {
     let bookmarks = JSON.parse(localStorage.getItem('gpt_bookmarks_v2') || '[]');
-    bookmarks = bookmarks.filter((b: any) => b.id !== id);
+    bookmarks = bookmarks.filter((b: Bookmark) => b.id !== id);
     localStorage.setItem('gpt_bookmarks_v2', JSON.stringify(bookmarks));
     window.dispatchEvent(new CustomEvent('bookmarksUpdated'));
     return;

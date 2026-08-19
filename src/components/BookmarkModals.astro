@@ -344,10 +344,7 @@
       
       const contentEl = document.getElementById("expanded-content");
       if (contentEl) {
-        // If content is already HTML, use it. Otherwise, escape and preserve newlines.
-        const raw = editData.content || "";
-        const isHTML = /<[a-z][\s\S]*>/i.test(raw);
-        contentEl.innerHTML = isHTML ? raw : raw; // white-space: pre-wrap will handle plain text newlines!
+        contentEl.textContent = editData.content || "";
       }
 
       eModal?.classList.remove("opacity-0", "pointer-events-none");
@@ -360,7 +357,7 @@
       const id = (document.getElementById("expanded-id") as HTMLInputElement).value;
       const title = (document.getElementById("expanded-title") as HTMLInputElement).value;
       const contentEl = document.getElementById("expanded-content");
-      const content = contentEl ? contentEl.innerHTML : "";
+      const content = contentEl ? contentEl.textContent || "" : "";
       const folder_id = (document.getElementById("expanded-folder-id") as HTMLInputElement).value;
       const tagsStr = (document.getElementById("expanded-tags") as HTMLInputElement).value;
 
