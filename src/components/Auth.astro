@@ -64,9 +64,11 @@
 
 <script>
   import { supabase } from '../lib/supabaseClient';
+  import { migrateLocalDataToCloud } from '../lib/dataClient';
 
   document.addEventListener('astro:page-load', async () => {
     if (!supabase) return;
+    const client = supabase;
     
     const authContainer = document.getElementById('auth-container');
     const authForm = document.getElementById('auth-form');
@@ -101,13 +103,14 @@
       // User is logged in, attach to global window
       window.currentUser = session.user;
       authContainer?.classList.add('hidden');
+      await migrateLocalDataToCloud(session.user.id);
       window.dispatchEvent(new CustomEvent('auth-changed'));
     }
 
     let isRecoveringPassword = isRecovery;
 
     // Listen for auth changes
-    supabase.auth.onAuthStateChange((event, session) => {
+    client.auth.onAuthStateChange(async (event, session) => {
       if (event === 'PASSWORD_RECOVERY') {
         isRecoveringPassword = true;
         authContainer?.classList.remove('hidden');
@@ -119,7 +122,14 @@
         const descEl = document.getElementById('auth-desc');
         if (titleEl) titleEl.textContent = 'Reset Password';
         if (descEl) descEl.textContent = 'Please enter your new password below.';
-      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+      } else if (event === 'SIGNED_IN') {
+        if (!isRecoveringPassword) {
+          window.currentUser = session?.user || null;
+          authContainer?.classList.add('hidden');
+          if (session?.user) await migrateLocalDataToCloud(session.user.id);
+          window.dispatchEvent(new CustomEvent('auth-changed'));
+        }
+      } else if (event === 'TOKEN_REFRESHED') {
         if (!isRecoveringPassword) {
           window.currentUser = session?.user || null;
           authContainer?.classList.add('hidden');
@@ -178,7 +188,7 @@
       const password = passwordInput.value;
       
       if (btnLogin) setLoading(btnLogin as HTMLButtonElement, 'Signing in...');
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      const { error } = await client.auth.signInWithPassword({ email, password });
       if (error) {
         showError(errorEl, msgEl, error.message);
         if (btnLogin) resetLoading(btnLogin as HTMLButtonElement);
@@ -191,7 +201,7 @@
       if (!email || !password) return showError(errorEl, msgEl, 'Email and password required');
       
       if (btnSignup) setLoading(btnSignup as HTMLButtonElement, 'Creating...');
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await client.auth.signUp({ email, password });
       if (error) {
         showError(errorEl, msgEl, error.message);
         if (btnSignup) resetLoading(btnSignup as HTMLButtonElement);
@@ -210,7 +220,7 @@
         btnForgotPassword.classList.add('opacity-50', 'pointer-events-none');
       }
       
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await client.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + window.location.pathname,
       });
       
@@ -232,7 +242,7 @@
       
       if (btnUpdatePassword) setLoading(btnUpdatePassword as HTMLButtonElement, 'Updating...');
       
-      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      const { error } = await client.auth.updateUser({ password: newPassword });
       
       if (error) {
         showError(updateErrorEl, updateMsgEl, error.message);
@@ -249,7 +259,7 @@
 
     btnGithub?.addEventListener('click', async () => {
       if (btnGithub) setLoading(btnGithub as HTMLButtonElement, 'Redirecting...');
-      await supabase.auth.signInWithOAuth({ provider: 'github' });
+      await client.auth.signInWithOAuth({ provider: 'github' });
     });
   });
 </script>
