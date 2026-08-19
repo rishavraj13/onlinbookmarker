@@ -45,11 +45,11 @@ export async function getFolders(): Promise<Folder[]> {
   return data || [];
 }
 
-export async function saveFolder(name: string) {
+export async function saveFolder(name: string, isSystem: boolean = false) {
   if (!isSupabaseConfigured || !supabase) {
     const folders = await getFolders();
     if (!folders.find(f => f.name.toLowerCase() === name.toLowerCase())) {
-      folders.push({ id: `local-folder-${Date.now()}`, name });
+      folders.push({ id: `local-folder-${Date.now()}`, name, is_system: isSystem });
       localStorage.setItem('gpt_bookmark_folders_v2', JSON.stringify(folders));
       window.dispatchEvent(new CustomEvent('foldersUpdated'));
     }
@@ -65,7 +65,8 @@ export async function saveFolder(name: string) {
   
   const { error } = await supabase.from('folders').insert({
     name,
-    user_id: window.currentUser.id
+    user_id: window.currentUser.id,
+    is_system: isSystem
   });
   
   if (error) console.error('Error inserting folder:', error);

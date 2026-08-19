@@ -97,13 +97,13 @@ import BookmarkModals from '../components/BookmarkModals.astro';
   async function initClipboard() {
     // 1. Find or create the Clipboard folder
     let folders = await getFolders();
-    let clipboardFolder = folders.find((f: Folder) => f.name.toLowerCase() === 'clipboard');
+    let clipboardFolder = folders.find((f: Folder) => f.is_system === true);
     
     if (!clipboardFolder) {
-      await saveFolder('Clipboard');
+      await saveFolder('Clipboard', true);
       // Adding a small delay to ensure event propagation if needed, though await should be enough
       folders = await getFolders();
-      clipboardFolder = folders.find((f: Folder) => f.name.toLowerCase() === 'clipboard');
+      clipboardFolder = folders.find((f: Folder) => f.is_system === true);
     }
 
     if (clipboardFolder) {
